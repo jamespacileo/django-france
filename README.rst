@@ -1,8 +1,8 @@
-#French law compliant Django
-
-##*Warning:* do not use for production. Does not abide by common sense and security standards.
-
-_____
+=============================
+French law compliant Django
+=============================
+Warning! Do not use for production. Does not abide by common sense and security standards.
+-----------------------------
 
 Django is a high-level Python Web framework that encourages rapid development
 and clean, pragmatic design.
