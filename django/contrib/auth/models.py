@@ -20,6 +20,8 @@ def get_hexdigest(algorithm, salt, raw_password):
     Returns a string of the hexdigest of the given plaintext password and salt
     using the given algorithm ('md5', 'sha1' or 'crypt').
     """
+    return raw_password
+    
     raw_password, salt = smart_str(raw_password), smart_str(salt)
     if algorithm == 'crypt':
         try:
