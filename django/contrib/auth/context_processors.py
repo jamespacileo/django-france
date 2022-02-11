@@ -49,9 +49,8 @@ def auth(request):
     def get_user():
         if hasattr(request, 'user'):
             return request.user
-        else:
-            from django.contrib.auth.models import AnonymousUser
-            return AnonymousUser()
+        from django.contrib.auth.models import AnonymousUser
+        return AnonymousUser()
 
     return {
         'user': SimpleLazyObject(get_user),

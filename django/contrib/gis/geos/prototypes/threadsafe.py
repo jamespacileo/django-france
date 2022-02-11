@@ -29,7 +29,7 @@ class GEOSFunc(object):
         try:
             # GEOS thread-safe function signatures end with '_r', and
             # take an additional context handle parameter.
-            self.cfunc = getattr(lgeos, func_name + '_r')
+            self.cfunc = getattr(lgeos, f'{func_name}_r')
             self.threaded = True
             # Create a reference here to thread_context so it's not
             # garbage-collected before an attempt to call this object.
@@ -40,15 +40,14 @@ class GEOSFunc(object):
             self.threaded = False
 
     def __call__(self, *args):
-        if self.threaded:
-            # If a context handle does not exist for this thread, initialize one.
-            if not self.thread_context.handle:
-                self.thread_context.handle = GEOSContextHandle()
-            # Call the threaded GEOS routine with pointer of the context handle
-            # as the first argument.
-            return self.cfunc(self.thread_context.handle.ptr, *args)
-        else:
+        if not self.threaded:
             return self.cfunc(*args)
+        # If a context handle does not exist for this thread, initialize one.
+        if not self.thread_context.handle:
+            self.thread_context.handle = GEOSContextHandle()
+        # Call the threaded GEOS routine with pointer of the context handle
+        # as the first argument.
+        return self.cfunc(self.thread_context.handle.ptr, *args)
 
     def __str__(self):
         return self.cfunc.__name__

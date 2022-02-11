@@ -47,7 +47,7 @@ def precision_wkt(geom, prec):
         elif gtype == 'MULTIPOLYGON':
             yield ','.join(['(%s)' % formatted_poly(p) for p in g])
         elif gtype == 'GEOMETRYCOLLECTION':
-            yield ','.join([''.join([wkt for wkt in formatted_geom(child)]) for child in g])
+            yield ','.join([''.join(list(formatted_geom(child))) for child in g])
         else:
             raise TypeError
         yield ')'

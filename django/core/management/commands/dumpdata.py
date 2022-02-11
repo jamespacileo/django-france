@@ -171,14 +171,9 @@ def sort_dependencies(app_list):
         while model_dependencies:
             model, deps = model_dependencies.pop()
 
-            # If all of the models in the dependency list are either already
-            # on the final model list, or not on the original serialization list,
-            # then we've found another model with all it's dependencies satisfied.
-            found = True
-            for candidate in ((d not in models or d in model_list) for d in deps):
-                if not candidate:
-                    found = False
-            if found:
+            if found := all(
+                (d not in models or d in model_list) for d in deps
+            ):
                 model_list.append(model)
                 changed = True
             else:

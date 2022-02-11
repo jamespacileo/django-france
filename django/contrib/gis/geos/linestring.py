@@ -23,9 +23,7 @@ class LineString(GEOSGeometry):
          ls = LineString(Point(1, 1), Point(2, 2))
         """
         # If only one argument provided, set the coords array appropriately
-        if len(args) == 1: coords = args[0]
-        else: coords = args
-
+        coords = args[0] if len(args) == 1 else args
         if isinstance(coords, (tuple, list)):
             # Getting the number of coords and the number of dimensions -- which
             #  must stay the same, e.g., no LineString((1, 2), (1, 2, 3)).
@@ -88,8 +86,7 @@ class LineString(GEOSGeometry):
         for i, c in enumerate(items):
             cs[i] = c
 
-        ptr = self._init_func(cs.ptr)
-        if ptr:
+        if ptr := self._init_func(cs.ptr):
             capi.destroy_geom(self.ptr)
             self.ptr = ptr
             self._post_init(self.srid)
@@ -117,8 +114,7 @@ class LineString(GEOSGeometry):
         the given function.  Will return a numpy array if possible.
         """
         lst = [func(i) for i in xrange(len(self))]
-        if numpy: return numpy.array(lst) # ARRRR!
-        else: return lst
+        return numpy.array(lst) if numpy else lst
 
     @property
     def array(self):
@@ -143,8 +139,7 @@ class LineString(GEOSGeometry):
     @property
     def z(self):
         "Returns a list or numpy array of the Z variable."
-        if not self.hasz: return None
-        else: return self._listarr(self._cs.getZ)
+        return None if not self.hasz else self._listarr(self._cs.getZ)
 
 # LinearRings are LineStrings used within Polygons.
 class LinearRing(LineString):

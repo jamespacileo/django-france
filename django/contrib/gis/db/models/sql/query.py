@@ -79,9 +79,10 @@ class GeoQuery(sql.Query):
         # and move them to the outer AggregateQuery.
         connection = connections[using]
         for alias, aggregate in self.aggregate_select.items():
-            if isinstance(aggregate, gis_aggregates.GeoAggregate):
-                if not getattr(aggregate, 'is_extent', False) or connection.ops.oracle:
-                    self.extra_select_fields[alias] = GeomField()
+            if isinstance(aggregate, gis_aggregates.GeoAggregate) and (
+                not getattr(aggregate, 'is_extent', False) or connection.ops.oracle
+            ):
+                self.extra_select_fields[alias] = GeomField()
         return super(GeoQuery, self).get_aggregation(using)
 
     def resolve_aggregate(self, value, aggregate, connection):
@@ -89,16 +90,14 @@ class GeoQuery(sql.Query):
         Overridden from GeoQuery's normalize to handle the conversion of
         GeoAggregate objects.
         """
-        if isinstance(aggregate, self.aggregates_module.GeoAggregate):
-            if aggregate.is_extent:
-                if aggregate.is_extent == '3D':
-                    return connection.ops.convert_extent3d(value)
-                else:
-                    return connection.ops.convert_extent(value)
-            else:
-                return connection.ops.convert_geom(value, aggregate.source)
-        else:
+        if not isinstance(aggregate, self.aggregates_module.GeoAggregate):
             return super(GeoQuery, self).resolve_aggregate(value, aggregate, connection)
+        if not aggregate.is_extent:
+            return connection.ops.convert_geom(value, aggregate.source)
+        if aggregate.is_extent == '3D':
+            return connection.ops.convert_extent3d(value)
+        else:
+            return connection.ops.convert_extent(value)
 
     # Private API utilities, subject to change.
     def _geo_field(self, field_name=None):
@@ -109,10 +108,15 @@ class GeoQuery(sql.Query):
         to a geometry field via a ForeignKey relation.
         """
         if field_name is None:
-            # Incrementing until the first geographic field is found.
-            for fld in self.model._meta.fields:
-                if isinstance(fld, GeometryField): return fld
-            return False
+            return next(
+                (
+                    fld
+                    for fld in self.model._meta.fields
+                    if isinstance(fld, GeometryField)
+                ),
+                False,
+            )
+
         else:
             # Otherwise, check by the given field name -- which may be
             # a lookup to a _related_ geographic field.

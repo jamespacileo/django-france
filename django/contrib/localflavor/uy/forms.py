@@ -54,7 +54,7 @@ class UYCIField(RegexField):
         number = int(match.group('num').replace('.', ''))
         validation_digit = int(match.group('val'))
 
-        if not validation_digit == get_validation_digit(number):
+        if validation_digit != get_validation_digit(number):
             raise ValidationError(self.error_messages['invalid_validation_digit'])
 
         return value

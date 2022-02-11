@@ -53,11 +53,10 @@ class FilterSpec(object):
         if self.has_output():
             t.append(_(u'<h3>By %s:</h3>\n<ul>\n') % escape(self.title()))
 
-            for choice in self.choices(cl):
-                t.append(u'<li%s><a href="%s">%s</a></li>\n' % \
+            t.extend(u'<li%s><a href="%s">%s</a></li>\n' % \
                     ((choice['selected'] and ' class="selected"' or ''),
                      iri_to_uri(choice['query_string']),
-                     choice['display']))
+                     choice['display']) for choice in self.choices(cl))
             t.append('</ul>\n\n')
         return mark_safe("".join(t))
 
@@ -149,9 +148,10 @@ class BooleanFieldFilterSpec(FilterSpec):
                                    [self.lookup_kwarg]),
                    'display': _('Unknown')}
 
-FilterSpec.register(lambda f: isinstance(f, models.BooleanField)
-                              or isinstance(f, models.NullBooleanField),
-                                 BooleanFieldFilterSpec)
+FilterSpec.register(
+    lambda f: isinstance(f, (models.BooleanField, models.NullBooleanField)),
+    BooleanFieldFilterSpec,
+)
 
 class ChoicesFilterSpec(FilterSpec):
     def __init__(self, f, request, params, model, model_admin,

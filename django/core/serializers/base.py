@@ -43,13 +43,14 @@ class Serializer(object):
                     if field.rel is None:
                         if self.selected_fields is None or field.attname in self.selected_fields:
                             self.handle_field(obj, field)
-                    else:
-                        if self.selected_fields is None or field.attname[:-3] in self.selected_fields:
-                            self.handle_fk_field(obj, field)
+                    elif self.selected_fields is None or field.attname[:-3] in self.selected_fields:
+                        self.handle_fk_field(obj, field)
             for field in obj._meta.many_to_many:
-                if field.serialize:
-                    if self.selected_fields is None or field.attname in self.selected_fields:
-                        self.handle_m2m_field(obj, field)
+                if field.serialize and (
+                    self.selected_fields is None
+                    or field.attname in self.selected_fields
+                ):
+                    self.handle_m2m_field(obj, field)
             self.end_object(obj)
         self.end_serialization()
         return self.getvalue()

@@ -6,6 +6,7 @@ This exists in this standalone file so that it's only imported into memory
 when explicitly needed.
 """
 
+
 STATE_CHOICES = (
     ('KA', 'Karnataka'),
     ('AP', 'Andhra Pradesh'),
@@ -61,7 +62,6 @@ STATES_NORMALIZED = {
     'dl': 'DL',
     'dd': 'DD',
     'br': 'BR',
-    'ar': 'AR',
     'sk': 'SK',
     'kl': 'KL',
     'ga': 'GA',

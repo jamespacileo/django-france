@@ -36,9 +36,15 @@ class FRPhoneNumberField(Field):
         if value in EMPTY_VALUES:
             return u''
         value = re.sub('(\.|\s)', '', smart_unicode(value))
-        m = phone_digits_re.search(value)
-        if m:
-            return u'%s %s %s %s %s' % (value[0:2], value[2:4], value[4:6], value[6:8], value[8:10])
+        if m := phone_digits_re.search(value):
+            return u'%s %s %s %s %s' % (
+                value[:2],
+                value[2:4],
+                value[4:6],
+                value[6:8],
+                value[8:10],
+            )
+
         raise ValidationError(self.error_messages['invalid'])
 
 class FRDepartmentSelect(Select):

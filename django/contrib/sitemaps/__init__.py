@@ -62,14 +62,13 @@ class Sitemap(object):
     paginator = property(_get_paginator)
 
     def get_urls(self, page=1, site=None):
+        if site is None and Site._meta.installed:
+            try:
+                site = Site.objects.get_current()
+            except Site.DoesNotExist:
+                pass
         if site is None:
-            if Site._meta.installed:
-                try:
-                    site = Site.objects.get_current()
-                except Site.DoesNotExist:
-                    pass
-            if site is None:
-                raise ImproperlyConfigured("In order to use Sitemaps you must either use the sites framework or pass in a Site or RequestSite object in your view code.")
+            raise ImproperlyConfigured("In order to use Sitemaps you must either use the sites framework or pass in a Site or RequestSite object in your view code.")
 
         urls = []
         for item in self.paginator.page(page).object_list:

@@ -197,9 +197,7 @@ class BaseModelAdmin(object):
         admin site. This is used by changelist_view.
         """
         qs = self.model._default_manager.get_query_set()
-        # TODO: this should be handled by some parameter to the ChangeList.
-        ordering = self.ordering or () # otherwise we might try to *None, which is bad ;)
-        if ordering:
+        if ordering := self.ordering or ():
             qs = qs.order_by(*ordering)
         return qs
 
@@ -339,8 +337,7 @@ class ModelAdmin(BaseModelAdmin):
         if self.actions is not None:
             js.extend(['js/actions.min.js'])
         if self.prepopulated_fields:
-            js.append('js/urlify.js')
-            js.append('js/prepopulate.min.js')
+            js.extend(('js/urlify.js', 'js/prepopulate.min.js'))
         if self.opts.get_ordered_objects():
             js.extend(['js/getElementsBySelector.js', 'js/dom-drag.js' , 'js/admin/ordering.js'])
 
@@ -353,7 +350,7 @@ class ModelAdmin(BaseModelAdmin):
         Can be overriden by the user in subclasses.
         """
         opts = self.opts
-        return request.user.has_perm(opts.app_label + '.' + opts.get_add_permission())
+        return request.user.has_perm(f'{opts.app_label}.' + opts.get_add_permission())
 
     def has_change_permission(self, request, obj=None):
         """
@@ -367,7 +364,9 @@ class ModelAdmin(BaseModelAdmin):
         request has permission to change *any* object of the given type.
         """
         opts = self.opts
-        return request.user.has_perm(opts.app_label + '.' + opts.get_change_permission())
+        return request.user.has_perm(
+            f'{opts.app_label}.' + opts.get_change_permission()
+        )
 
     def has_delete_permission(self, request, obj=None):
         """
@@ -381,7 +380,9 @@ class ModelAdmin(BaseModelAdmin):
         request has permission to delete *any* object of the given type.
         """
         opts = self.opts
-        return request.user.has_perm(opts.app_label + '.' + opts.get_delete_permission())
+        return request.user.has_perm(
+            f'{opts.app_label}.' + opts.get_delete_permission()
+        )
 
     def get_model_perms(self, request):
         """
@@ -412,10 +413,7 @@ class ModelAdmin(BaseModelAdmin):
             fields = flatten_fieldsets(self.declared_fieldsets)
         else:
             fields = None
-        if self.exclude is None:
-            exclude = []
-        else:
-            exclude = list(self.exclude)
+        exclude = [] if self.exclude is None else list(self.exclude)
         exclude.extend(kwargs.get("exclude", []))
         exclude.extend(self.get_readonly_fields(request, obj))
         # if exclude is an empty list we pass None to be consistant with the
@@ -627,19 +625,34 @@ class ModelAdmin(BaseModelAdmin):
 
         if formsets:
             for formset in formsets:
-                for added_object in formset.new_objects:
-                    change_message.append(_('Added %(name)s "%(object)s".')
-                                          % {'name': force_unicode(added_object._meta.verbose_name),
-                                             'object': force_unicode(added_object)})
-                for changed_object, changed_fields in formset.changed_objects:
-                    change_message.append(_('Changed %(list)s for %(name)s "%(object)s".')
-                                          % {'list': get_text_list(changed_fields, _('and')),
-                                             'name': force_unicode(changed_object._meta.verbose_name),
-                                             'object': force_unicode(changed_object)})
-                for deleted_object in formset.deleted_objects:
-                    change_message.append(_('Deleted %(name)s "%(object)s".')
-                                          % {'name': force_unicode(deleted_object._meta.verbose_name),
-                                             'object': force_unicode(deleted_object)})
+                change_message.extend(
+                    _('Added %(name)s "%(object)s".')
+                    % {
+                        'name': force_unicode(added_object._meta.verbose_name),
+                        'object': force_unicode(added_object),
+                    }
+                    for added_object in formset.new_objects
+                )
+
+                change_message.extend(
+                    _('Changed %(list)s for %(name)s "%(object)s".')
+                    % {
+                        'list': get_text_list(changed_fields, _('and')),
+                        'name': force_unicode(changed_object._meta.verbose_name),
+                        'object': force_unicode(changed_object),
+                    }
+                    for changed_object, changed_fields in formset.changed_objects
+                )
+
+                change_message.extend(
+                    _('Deleted %(name)s "%(object)s".')
+                    % {
+                        'name': force_unicode(deleted_object._meta.verbose_name),
+                        'object': force_unicode(deleted_object),
+                    }
+                    for deleted_object in formset.deleted_objects
+                )
+
         change_message = ' '.join(change_message)
         return change_message or _('No fields changed.')
 
@@ -727,7 +740,13 @@ class ModelAdmin(BaseModelAdmin):
                 # escape() calls force_unicode.
                 (escape(pk_value), escapejs(obj)))
         elif "_addanother" in request.POST:
-            self.message_user(request, msg + ' ' + (_("You may add another %s below.") % force_unicode(opts.verbose_name)))
+            self.message_user(
+                request,
+                f'{msg} '
+                + _("You may add another %s below.")
+                % force_unicode(opts.verbose_name),
+            )
+
             return HttpResponseRedirect(request.path)
         else:
             self.message_user(request, msg)
@@ -735,10 +754,7 @@ class ModelAdmin(BaseModelAdmin):
             # Figure out where to redirect. If the user has change permission,
             # redirect to the change-list page for this object. Otherwise,
             # redirect to the admin index.
-            if self.has_change_permission(request, None):
-                post_url = '../'
-            else:
-                post_url = '../../../'
+            post_url = '../' if self.has_change_permission(request, None) else '../../../'
             return HttpResponseRedirect(post_url)
 
     def response_change(self, request, obj):
@@ -757,9 +773,9 @@ class ModelAdmin(BaseModelAdmin):
 
         msg = _('The %(name)s "%(obj)s" was changed successfully.') % {'name': force_unicode(verbose_name), 'obj': force_unicode(obj)}
         if "_continue" in request.POST:
-            self.message_user(request, msg + ' ' + _("You may edit it again below."))
+            self.message_user(request, f'{msg} ' + _("You may edit it again below."))
             if "_popup" in request.REQUEST:
-                return HttpResponseRedirect(request.path + "?_popup=1")
+                return HttpResponseRedirect(f'{request.path}?_popup=1')
             else:
                 return HttpResponseRedirect(request.path)
         elif "_saveasnew" in request.POST:
@@ -858,6 +874,7 @@ class ModelAdmin(BaseModelAdmin):
 
         ModelForm = self.get_form(request)
         formsets = []
+        prefixes = {}
         if request.method == 'POST':
             form = ModelForm(request.POST, request.FILES)
             if form.is_valid():
@@ -866,7 +883,6 @@ class ModelAdmin(BaseModelAdmin):
             else:
                 form_validated = False
                 new_object = self.model()
-            prefixes = {}
             for FormSet, inline in zip(self.get_formsets(request), self.inline_instances):
                 prefix = FormSet.get_default_prefix()
                 prefixes[prefix] = prefixes.get(prefix, 0) + 1
@@ -897,7 +913,6 @@ class ModelAdmin(BaseModelAdmin):
                 if isinstance(f, models.ManyToManyField):
                     initial[k] = initial[k].split(",")
             form = ModelForm(initial=initial)
-            prefixes = {}
             for FormSet, inline in zip(self.get_formsets(request),
                                        self.inline_instances):
                 prefix = FormSet.get_default_prefix()
@@ -956,6 +971,7 @@ class ModelAdmin(BaseModelAdmin):
 
         ModelForm = self.get_form(request, obj)
         formsets = []
+        prefixes = {}
         if request.method == 'POST':
             form = ModelForm(request.POST, request.FILES, instance=obj)
             if form.is_valid():
@@ -964,7 +980,6 @@ class ModelAdmin(BaseModelAdmin):
             else:
                 form_validated = False
                 new_object = obj
-            prefixes = {}
             for FormSet, inline in zip(self.get_formsets(request, new_object),
                                        self.inline_instances):
                 prefix = FormSet.get_default_prefix()
@@ -989,7 +1004,6 @@ class ModelAdmin(BaseModelAdmin):
 
         else:
             form = ModelForm(instance=obj)
-            prefixes = {}
             for FormSet, inline in zip(self.get_formsets(request, obj), self.inline_instances):
                 prefix = FormSet.get_default_prefix()
                 prefixes[prefix] = prefixes.get(prefix, 0) + 1

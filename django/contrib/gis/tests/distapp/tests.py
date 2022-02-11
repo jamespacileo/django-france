@@ -61,13 +61,9 @@ class DistanceTest(TestCase):
 
         # Now performing the `dwithin` queries on a geodetic coordinate system.
         for dist in au_dists:
-            if isinstance(dist, D) and not oracle: type_error = True
-            else: type_error = False
-
+            type_error = isinstance(dist, D) and not oracle
             if isinstance(dist, tuple):
-                if oracle: dist = dist[1]
-                else: dist = dist[0]
-
+                dist = dist[1] if oracle else dist[0]
             # Creating the query set.
             qs = AustraliaCity.objects.order_by('name')
             if type_error:
@@ -107,9 +103,7 @@ class DistanceTest(TestCase):
 
         # Original query done on PostGIS, have to adjust AlmostEqual tolerance
         # for Oracle.
-        if oracle: tol = 2
-        else: tol = 5
-
+        tol = 2 if oracle else 5
         # Ensuring expected distances are returned for each distance queryset.
         for qs in dist_qs:
             for i, c in enumerate(qs):
@@ -119,9 +113,7 @@ class DistanceTest(TestCase):
     @no_spatialite
     def test03b_distance_method(self):
         "Testing the `distance` GeoQuerySet method on geodetic coordnate systems."
-        if oracle: tol = 2
-        else: tol = 5
-
+        tol = 2 if oracle else 5
         # Testing geodetic distance calculation with a non-point geometry
         # (a LineString of Wollongong and Shellharbour coords).
         ls = LineString( ( (150.902, -34.4245), (150.87, -34.5789) ) )
@@ -313,9 +305,6 @@ class DistanceTest(TestCase):
 
     def test07_length(self):
         "Testing the `length` GeoQuerySet method."
-        # Reference query (should use `length_spheroid`).
-        # SELECT ST_length_spheroid(ST_GeomFromText('<wkt>', 4326) 'SPHEROID["WGS 84",6378137,298.257223563, AUTHORITY["EPSG","7030"]]');
-        len_m1 = 473504.769553813
         len_m2 = 4617.668
 
         if spatialite:
@@ -323,8 +312,10 @@ class DistanceTest(TestCase):
             self.assertRaises(ValueError, Interstate.objects.length)
         else:
             qs = Interstate.objects.length()
-            if oracle: tol = 2
-            else: tol = 5
+            tol = 2 if oracle else 5
+            # Reference query (should use `length_spheroid`).
+            # SELECT ST_length_spheroid(ST_GeomFromText('<wkt>', 4326) 'SPHEROID["WGS 84",6378137,298.257223563, AUTHORITY["EPSG","7030"]]');
+            len_m1 = 473504.769553813
             self.assertAlmostEqual(len_m1, qs[0].length.m, tol)
 
         # Now doing length on a projected coordinate system.
@@ -337,13 +328,12 @@ class DistanceTest(TestCase):
         # Reference query:
         # SELECT ST_Perimeter(distapp_southtexaszipcode.poly) FROM distapp_southtexaszipcode;
         perim_m = [18404.3550889361, 15627.2108551001, 20632.5588368978, 17094.5996143697]
-        if oracle: tol = 2
-        else: tol = 7
+        tol = 2 if oracle else 7
         for i, z in enumerate(SouthTexasZipcode.objects.perimeter()):
             self.assertAlmostEqual(perim_m[i], z.perimeter.m, tol)
 
         # Running on points; should return 0.
-        for i, c in enumerate(SouthTexasCity.objects.perimeter(model_att='perim')):
+        for c in SouthTexasCity.objects.perimeter(model_att='perim'):
             self.assertEqual(0, c.perim.m)
 
     def test09_measurement_null_fields(self):

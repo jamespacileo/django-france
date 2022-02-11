@@ -104,7 +104,7 @@ class SpatialRefSysTest(unittest.TestCase):
             for i in range(3):
                 param1 = ellps1[i]
                 param2 = ellps2[i]
-                self.assertAlmostEqual(ellps1[i], ellps2[i], prec[i])
+                self.assertAlmostEqual(param1, param2, prec[i])
 
 def suite():
     s = unittest.TestSuite()

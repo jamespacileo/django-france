@@ -13,10 +13,7 @@ def add_domain(domain, url, secure=False):
             or url.startswith('mailto:')):
         # 'url' must already be ASCII and URL-quoted, so no need for encoding
         # conversions here.
-        if secure:
-            protocol = 'https'
-        else:
-            protocol = 'http'
+        protocol = 'https' if secure else 'http'
         url = iri_to_uri(u'%s://%s%s' % (protocol, domain, url))
     return url
 
@@ -66,10 +63,7 @@ class Feed(object):
                 argcount = attr.func_code.co_argcount
             else:
                 argcount = attr.__call__.func_code.co_argcount
-            if argcount == 2: # one argument is 'self'
-                return attr(obj)
-            else:
-                return attr()
+            return attr(obj) if argcount == 2 else attr()
         return attr
 
     def feed_extra_kwargs(self, obj):
@@ -149,8 +143,7 @@ class Feed(object):
                 request.is_secure(),
             )
             enc = None
-            enc_url = self.__get_dynamic_attr('item_enclosure_url', item)
-            if enc_url:
+            if enc_url := self.__get_dynamic_attr('item_enclosure_url', item):
                 enc = feedgenerator.Enclosure(
                     url = smart_unicode(enc_url),
                     length = smart_unicode(self.__get_dynamic_attr('item_enclosure_length', item)),

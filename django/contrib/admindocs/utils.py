@@ -25,7 +25,7 @@ def trim_docstring(docstring):
         return ''
     # Convert tabs to spaces and split into lines
     lines = docstring.expandtabs().splitlines()
-    indent = min([len(line) - len(line.lstrip()) for line in lines if line.lstrip()])
+    indent = min(len(line) - len(line.lstrip()) for line in lines if line.lstrip())
     trimmed = [lines[0].lstrip()] + [line[indent:].rstrip() for line in lines[1:]]
     return "\n".join(trimmed).strip()
 
@@ -47,11 +47,8 @@ def parse_docstring(docstring):
             metadata = {}
             body = "\n\n".join(parts[1:])
         else:
-            metadata = dict(metadata.items())
-            if metadata:
-                body = "\n\n".join(parts[1:-1])
-            else:
-                body = "\n\n".join(parts[1:])
+            metadata = dict(metadata)
+            body = "\n\n".join(parts[1:-1]) if metadata else "\n\n".join(parts[1:])
     return title, body, metadata
 
 def parse_rst(text, default_reference_context, thing_being_parsed=None):

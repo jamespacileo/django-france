@@ -104,11 +104,11 @@ class ARCUITField(RegexField):
 
     def _calc_cd(self, cuit):
         mults = (5, 4, 3, 2, 7, 6, 5, 4, 3, 2)
-        tmp = sum([m * int(cuit[idx]) for idx, m in enumerate(mults)])
+        tmp = sum(m * int(cuit[idx]) for idx, m in enumerate(mults))
         return str(11 - tmp % 11)
 
     def _format(self, cuit, check_digit=None):
-        if check_digit == None:
+        if check_digit is None:
             check_digit = cuit[-1]
             cuit = cuit[:-1]
         return u'%s-%s-%s' % (cuit[:2], cuit[2:], check_digit)

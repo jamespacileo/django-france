@@ -25,8 +25,7 @@ def color_style():
         style = no_style()
     else:
         DJANGO_COLORS = os.environ.get('DJANGO_COLORS', '')
-        color_settings = termcolors.parse_color_setting(DJANGO_COLORS)
-        if color_settings:
+        if color_settings := termcolors.parse_color_setting(DJANGO_COLORS):
             class dummy: pass
             style = dummy()
             # The nocolor palette has all available roles.

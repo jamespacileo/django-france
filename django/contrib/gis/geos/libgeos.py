@@ -6,6 +6,7 @@
  This module also houses GEOS Pointer utilities, including
  get_pointer_arr(), and GEOM_PTR.
 """
+
 import os, re, sys
 from ctypes import c_char_p, Structure, CDLL, CFUNCTYPE, POINTER
 from ctypes.util import find_library
@@ -36,7 +37,7 @@ else:
 if lib_names:
     for lib_name in lib_names:
         lib_path = find_library(lib_name)
-        if not lib_path is None: break
+        if lib_path is not None: break
 
 # No GEOS library could be found.
 if lib_path is None:
@@ -111,7 +112,17 @@ def geos_version_info():
     ver = geos_version()
     m = version_regex.match(ver)
     if not m: raise GEOSException('Could not parse version info string "%s"' % ver)
-    return dict((key, m.group(key)) for key in ('version', 'release_candidate', 'capi_version', 'major', 'minor', 'subminor'))
+    return {
+        key: m.group(key)
+        for key in (
+            'version',
+            'release_candidate',
+            'capi_version',
+            'major',
+            'minor',
+            'subminor',
+        )
+    }
 
 # Version numbers and whether or not prepared geometry support is available.
 _verinfo = geos_version_info()
@@ -120,9 +131,7 @@ GEOS_MINOR_VERSION = int(_verinfo['minor'])
 GEOS_SUBMINOR_VERSION = int(_verinfo['subminor'])
 del _verinfo
 GEOS_VERSION = (GEOS_MAJOR_VERSION, GEOS_MINOR_VERSION, GEOS_SUBMINOR_VERSION)
-GEOS_PREPARE = GEOS_VERSION >= (3, 1, 0)
-
-if GEOS_PREPARE:
+if GEOS_PREPARE := GEOS_VERSION >= (3, 1, 0):
     # Here we set up the prototypes for the initGEOS_r and finishGEOS_r
     # routines.  These functions aren't actually called until they are
     # attached to a GEOS context handle -- this actually occurs in

@@ -53,8 +53,7 @@ class Point(GEOSGeometry):
         return capi.create_point(cs)
 
     def _set_list(self, length, items):
-        ptr = self._create_point(length, items)
-        if ptr:
+        if ptr := self._create_point(length, items):
             capi.destroy_geom(self.ptr)
             self._ptr = ptr
             self._set_cs()
@@ -73,8 +72,7 @@ class Point(GEOSGeometry):
     def __len__(self):
         "Returns the number of dimensions for this Point (either 0, 2 or 3)."
         if self.empty: return 0
-        if self.hasz: return 3
-        else: return 2
+        return 3 if self.hasz else 2
 
     def _get_single_external(self, index):
         if index == 0:
@@ -104,10 +102,7 @@ class Point(GEOSGeometry):
 
     def get_z(self):
         "Returns the Z component of the Point."
-        if self.hasz:
-            return self._cs.getOrdinate(2, 0)
-        else:
-            return None
+        return self._cs.getOrdinate(2, 0) if self.hasz else None
 
     def set_z(self, value):
         "Sets the Z component of the Point."

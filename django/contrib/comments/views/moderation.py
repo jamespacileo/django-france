@@ -20,17 +20,13 @@ def flag(request, comment_id, next=None):
     """
     comment = get_object_or_404(comments.get_model(), pk=comment_id, site__pk=settings.SITE_ID)
 
-    # Flag on POST
-    if request.method == 'POST':
-        perform_flag(request, comment)
-        return next_redirect(request.POST.copy(), next, flag_done, c=comment.pk)
-
-    # Render a form on GET
-    else:
+    if request.method != 'POST':
         return render_to_response('comments/flag.html',
             {'comment': comment, "next": next},
             template.RequestContext(request)
         )
+    perform_flag(request, comment)
+    return next_redirect(request.POST.copy(), next, flag_done, c=comment.pk)
 
 @csrf_protect
 @permission_required("comments.can_moderate")
@@ -46,18 +42,14 @@ def delete(request, comment_id, next=None):
     """
     comment = get_object_or_404(comments.get_model(), pk=comment_id, site__pk=settings.SITE_ID)
 
-    # Delete on POST
-    if request.method == 'POST':
-        # Flag the comment as deleted instead of actually deleting it.
-        perform_delete(request, comment)
-        return next_redirect(request.POST.copy(), next, delete_done, c=comment.pk)
-
-    # Render a form on GET
-    else:
+    if request.method != 'POST':
         return render_to_response('comments/delete.html',
             {'comment': comment, "next": next},
             template.RequestContext(request)
         )
+    # Flag the comment as deleted instead of actually deleting it.
+    perform_delete(request, comment)
+    return next_redirect(request.POST.copy(), next, delete_done, c=comment.pk)
 
 @csrf_protect
 @permission_required("comments.can_moderate")
@@ -73,18 +65,14 @@ def approve(request, comment_id, next=None):
     """
     comment = get_object_or_404(comments.get_model(), pk=comment_id, site__pk=settings.SITE_ID)
 
-    # Delete on POST
-    if request.method == 'POST':
-        # Flag the comment as approved.
-        perform_approve(request, comment)
-        return next_redirect(request.POST.copy(), next, approve_done, c=comment.pk)
-
-    # Render a form on GET
-    else:
+    if request.method != 'POST':
         return render_to_response('comments/approve.html',
             {'comment': comment, "next": next},
             template.RequestContext(request)
         )
+    # Flag the comment as approved.
+    perform_approve(request, comment)
+    return next_redirect(request.POST.copy(), next, approve_done, c=comment.pk)
 
 # The following functions actually perform the various flag/aprove/delete
 # actions. They've been broken out into seperate functions to that they

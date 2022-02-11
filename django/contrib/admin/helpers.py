@@ -87,10 +87,7 @@ class Fieldset(object):
 class Fieldline(object):
     def __init__(self, form, field, readonly_fields=None, model_admin=None):
         self.form = form # A django.forms.Form instance
-        if not hasattr(field, "__iter__"):
-            self.fields = [field]
-        else:
-            self.fields = field
+        self.fields = [field] if not hasattr(field, "__iter__") else field
         self.model_admin = model_admin
         if readonly_fields is None:
             readonly_fields = ()
@@ -173,20 +170,18 @@ class AdminReadonlyField(object):
             result_repr = EMPTY_CHANGELIST_VALUE
         else:
             if f is None:
-                boolean = getattr(attr, "boolean", False)
-                if boolean:
+                if boolean := getattr(attr, "boolean", False):
                     result_repr = _boolean_icon(value)
                 else:
                     result_repr = smart_unicode(value)
                     if getattr(attr, "allow_tags", False):
                         result_repr = mark_safe(result_repr)
+            elif value is None:
+                result_repr = EMPTY_CHANGELIST_VALUE
+            elif isinstance(f.rel, ManyToManyRel):
+                result_repr = ", ".join(map(unicode, value.all()))
             else:
-                if value is None:
-                    result_repr = EMPTY_CHANGELIST_VALUE
-                elif isinstance(f.rel, ManyToManyRel):
-                    result_repr = ", ".join(map(unicode, value.all()))
-                else:
-                    result_repr = display_for_field(value, f)
+                result_repr = display_for_field(value, f)
         return conditional_escape(result_repr)
 
 class InlineAdminFormSet(object):
@@ -217,7 +212,7 @@ class InlineAdminFormSet(object):
 
     def fields(self):
         fk = getattr(self.formset, "fk", None)
-        for i, field in enumerate(flatten_fieldsets(self.fieldsets)):
+        for field in flatten_fieldsets(self.fieldsets):
             if fk and fk.name == field:
                 continue
             if field in self.readonly_fields:
@@ -261,11 +256,10 @@ class InlineAdminForm(AdminForm):
     def has_auto_field(self):
         if self.form._meta.model._meta.has_auto_field:
             return True
-        # Also search any parents for an auto field.
-        for parent in self.form._meta.model._meta.get_parent_list():
-            if parent._meta.has_auto_field:
-                return True
-        return False
+        return any(
+            parent._meta.has_auto_field
+            for parent in self.form._meta.model._meta.get_parent_list()
+        )
 
     def field_count(self):
         # tabular.html uses this function for colspan value.
@@ -283,8 +277,7 @@ class InlineAdminForm(AdminForm):
         return AdminField(self.form, self.formset._pk_field.name, False)
 
     def fk_field(self):
-        fk = getattr(self.formset, "fk", None)
-        if fk:
+        if fk := getattr(self.formset, "fk", None):
             return AdminField(self.form, fk.name, False)
         else:
             return ""
@@ -327,10 +320,7 @@ def normalize_fieldsets(fieldsets):
     Make sure the keys in fieldset dictionaries are strings. Returns the
     normalized data.
     """
-    result = []
-    for name, options in fieldsets:
-        result.append((name, normalize_dictionary(options)))
-    return result
+    return [(name, normalize_dictionary(options)) for name, options in fieldsets]
 
 def normalize_dictionary(data_dict):
     """

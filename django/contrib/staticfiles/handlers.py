@@ -14,10 +14,7 @@ class StaticFilesHandler(WSGIHandler):
     """
     def __init__(self, application, base_dir=None):
         self.application = application
-        if base_dir:
-            self.base_dir = base_dir
-        else:
-            self.base_dir = self.get_base_dir()
+        self.base_dir = base_dir or self.get_base_dir()
         self.base_url = urlparse(self.get_base_url())
         super(StaticFilesHandler, self).__init__()
 

@@ -120,8 +120,7 @@ class ConnectionRouter(object):
                     # If the router doesn't have a method, skip to the next one.
                     pass
                 else:
-                    chosen_db = method(model, **hints)
-                    if chosen_db:
+                    if chosen_db := method(model, **hints):
                         return chosen_db
             try:
                 return hints['instance']._state.db or DEFAULT_DB_ALIAS

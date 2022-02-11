@@ -37,6 +37,6 @@ def url(regex, view, kwargs=None, name=None, prefix=''):
             if not view:
                 raise ImproperlyConfigured('Empty URL pattern view name not permitted (for pattern %r)' % regex)
             if prefix:
-                view = prefix + '.' + view
+                view = f'{prefix}.{view}'
         return RegexURLPattern(regex, view, kwargs, name)
 

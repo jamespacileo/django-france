@@ -75,10 +75,7 @@ class LayerMapping(object):
         argument usage.
         """
         # Getting the DataSource and the associated Layer.
-        if isinstance(data, basestring):
-            self.ds = DataSource(data)
-        else:
-            self.ds = data
+        self.ds = DataSource(data) if isinstance(data, basestring) else data
         self.layer = self.ds[layer]
 
         self.using = using
@@ -125,29 +122,23 @@ class LayerMapping(object):
         else:
             self.unique = None
 
-        # Setting the transaction decorator with the function in the
-        # transaction modes dictionary.
-        if transaction_mode in self.TRANSACTION_MODES:
-            self.transaction_decorator = self.TRANSACTION_MODES[transaction_mode]
-            self.transaction_mode = transaction_mode
-        else:
+        if transaction_mode not in self.TRANSACTION_MODES:
             raise LayerMapError('Unrecognized transaction mode: %s' % transaction_mode)
 
-        if using is None:
-            pass
+        self.transaction_decorator = self.TRANSACTION_MODES[transaction_mode]
+        self.transaction_mode = transaction_mode
 
     #### Checking routines used during initialization ####
     def check_fid_range(self, fid_range):
         "This checks the `fid_range` keyword."
-        if fid_range:
-            if isinstance(fid_range, (tuple, list)):
-                return slice(*fid_range)
-            elif isinstance(fid_range, slice):
-                return fid_range
-            else:
-                raise TypeError
-        else:
+        if not fid_range:
             return None
+        if isinstance(fid_range, (tuple, list)):
+            return slice(*fid_range)
+        elif isinstance(fid_range, slice):
+            return fid_range
+        else:
+            raise TypeError
 
     def check_layer(self):
         """
@@ -269,7 +260,7 @@ class LayerMapping(object):
         if isinstance(unique, (list, tuple)):
             # List of fields to determine uniqueness with
             for attr in unique:
-                if not attr in self.mapping: raise ValueError
+                if attr not in self.mapping: raise ValueError
         elif isinstance(unique, basestring):
             # Only a single field passed in.
             if unique not in self.mapping: raise ValueError
@@ -319,7 +310,7 @@ class LayerMapping(object):
         if isinstance(self.unique, basestring):
             return {self.unique : kwargs[self.unique]}
         else:
-            return dict((fld, kwargs[fld]) for fld in self.unique)
+            return {fld: kwargs[fld] for fld in self.unique}
 
     #### Verification routines used in constructing model keyword arguments. ####
     def verify_ogr_field(self, ogr_field, model_field):
@@ -356,11 +347,7 @@ class LayerMapping(object):
 
             # Getting the digits to the left of the decimal place for the
             # given decimal.
-            if d_idx < 0:
-                n_prec = len(digits[:d_idx])
-            else:
-                n_prec = len(digits) + d_idx
-
+            n_prec = len(digits[:d_idx]) if d_idx < 0 else len(digits) + d_idx
             # If we have more than the maximum digits allowed, then throw an
             # InvalidDecimal exception.
             if n_prec > max_prec:
@@ -388,9 +375,12 @@ class LayerMapping(object):
         #  ForeignKey models.
 
         # Constructing and verifying the related model keyword arguments.
-        fk_kwargs = {}
-        for field_name, ogr_name in rel_mapping.items():
-            fk_kwargs[field_name] = self.verify_ogr_field(feat[ogr_name], rel_model._meta.get_field(field_name))
+        fk_kwargs = {
+            field_name: self.verify_ogr_field(
+                feat[ogr_name], rel_model._meta.get_field(field_name)
+            )
+            for field_name, ogr_name in rel_mapping.items()
+        }
 
         # Attempting to retrieve and return the related model.
         try:

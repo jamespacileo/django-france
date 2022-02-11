@@ -9,11 +9,10 @@ def gqn(val):
     geometries (they use single rather than the double quotes of the
     backend quotename function).
     """
-    if isinstance(val, basestring):
-        if isinstance(val, unicode): val = val.encode('ascii')
-        return "'%s'" % val
-    else:
+    if not isinstance(val, basestring):
         return str(val)
+    if isinstance(val, unicode): val = val.encode('ascii')
+    return "'%s'" % val
 
 class SpatialOperation(object):
     """

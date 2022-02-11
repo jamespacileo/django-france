@@ -176,19 +176,18 @@ class ModPythonHandler(BaseHandler):
         set_script_prefix(req.get_options().get('django.root', ''))
         signals.request_started.send(sender=self.__class__)
         try:
-            try:
-                request = self.request_class(req)
-            except UnicodeDecodeError:
-                logger.warning('Bad Request (UnicodeDecodeError): %s' % request.path,
-                    exc_info=sys.exc_info(),
-                    extra={
-                        'status_code': 400,
-                        'request': request
-                    }
-                )
-                response = http.HttpResponseBadRequest()
-            else:
-                response = self.get_response(request)
+            request = self.request_class(req)
+        except UnicodeDecodeError:
+            logger.warning('Bad Request (UnicodeDecodeError): %s' % request.path,
+                exc_info=sys.exc_info(),
+                extra={
+                    'status_code': 400,
+                    'request': request
+                }
+            )
+            response = http.HttpResponseBadRequest()
+        else:
+            response = self.get_response(request)
         finally:
             signals.request_finished.send(sender=self.__class__)
 

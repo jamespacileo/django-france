@@ -8,10 +8,7 @@ def is_ignored(path, ignore_patterns=[]):
     Return True or False depending on whether the ``path`` should be
     ignored (if it matches any pattern in ``ignore_patterns``).
     """
-    for pattern in ignore_patterns:
-        if fnmatch.fnmatchcase(path, pattern):
-            return True
-    return False
+    return any(fnmatch.fnmatchcase(path, pattern) for pattern in ignore_patterns)
 
 def get_files(storage, ignore_patterns=[], location=''):
     """
@@ -30,8 +27,7 @@ def get_files(storage, ignore_patterns=[], location=''):
             continue
         if location:
             dir = os.path.join(location, dir)
-        for fn in get_files(storage, ignore_patterns, dir):
-            yield fn
+        yield from get_files(storage, ignore_patterns, dir)
 
 def check_settings():
     """

@@ -59,13 +59,12 @@ class CommentSecurityForm(forms.Form):
     def generate_security_data(self):
         """Generate a dict of security data for "initial" data."""
         timestamp = int(time.time())
-        security_dict =   {
+        return {
             'content_type'  : str(self.target_object._meta),
             'object_pk'     : str(self.target_object._get_pk_val()),
             'timestamp'     : str(timestamp),
             'security_hash' : self.initial_security_hash(timestamp),
         }
-        return security_dict
 
     def initial_security_hash(self, timestamp):
         """
@@ -171,8 +170,9 @@ class CommentDetailsForm(CommentSecurityForm):
         """
         comment = self.cleaned_data["comment"]
         if settings.COMMENTS_ALLOW_PROFANITIES == False:
-            bad_words = [w for w in settings.PROFANITIES_LIST if w in comment.lower()]
-            if bad_words:
+            if bad_words := [
+                w for w in settings.PROFANITIES_LIST if w in comment.lower()
+            ]:
                 plural = len(bad_words) > 1
                 raise forms.ValidationError(ungettext(
                     "Watch your mouth! The word %s is not allowed here.",

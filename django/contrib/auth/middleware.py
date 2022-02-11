@@ -55,13 +55,12 @@ class RemoteUserMiddleware(object):
         # If the user is already authenticated and that user is the user we are
         # getting passed in the headers, then the correct user is already
         # persisted in the session and we don't need to continue.
-        if request.user.is_authenticated():
-            if request.user.username == self.clean_username(username, request):
-                return
-        # We are seeing this user for the first time in this session, attempt
-        # to authenticate the user.
-        user = auth.authenticate(remote_user=username)
-        if user:
+        if (
+            request.user.is_authenticated()
+            and request.user.username == self.clean_username(username, request)
+        ):
+            return
+        if user := auth.authenticate(remote_user=username):
             # User is valid.  Set request.user and persist user in the session
             # by logging the user in.
             request.user = user

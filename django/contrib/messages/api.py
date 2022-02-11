@@ -37,9 +37,8 @@ def get_messages(request):
     def get_user():
         if hasattr(request, 'user'):
             return request.user
-        else:
-            from django.contrib.auth.models import AnonymousUser
-            return AnonymousUser()
+        from django.contrib.auth.models import AnonymousUser
+        return AnonymousUser()
 
     return lazy(memoize(get_user().get_and_delete_messages, {}, 0), list)()
 

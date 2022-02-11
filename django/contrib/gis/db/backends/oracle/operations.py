@@ -133,32 +133,28 @@ class OracleOperations(DatabaseOperations, BaseSpatialOperations):
     truncate_params = {'relate' : None}
 
     def convert_extent(self, clob):
-        if clob:
-            # Generally, Oracle returns a polygon for the extent -- however,
-            # it can return a single point if there's only one Point in the
-            # table.
-            ext_geom = Geometry(clob.read())
-            gtype = str(ext_geom.geom_type)
-            if gtype == 'Polygon':
-                # Construct the 4-tuple from the coordinates in the polygon.
-                shell = ext_geom.shell
-                ll, ur = shell[0][:2], shell[2][:2]
-            elif gtype == 'Point':
-                ll = ext_geom.coords[:2]
-                ur = ll
-            else:
-                raise Exception('Unexpected geometry type returned for extent: %s' % gtype)
-            xmin, ymin = ll
-            xmax, ymax = ur
-            return (xmin, ymin, xmax, ymax)
-        else:
+        if not clob:
             return None
+        # Generally, Oracle returns a polygon for the extent -- however,
+        # it can return a single point if there's only one Point in the
+        # table.
+        ext_geom = Geometry(clob.read())
+        gtype = str(ext_geom.geom_type)
+        if gtype == 'Polygon':
+            # Construct the 4-tuple from the coordinates in the polygon.
+            shell = ext_geom.shell
+            ll, ur = shell[0][:2], shell[2][:2]
+        elif gtype == 'Point':
+            ll = ext_geom.coords[:2]
+            ur = ll
+        else:
+            raise Exception('Unexpected geometry type returned for extent: %s' % gtype)
+        xmin, ymin = ll
+        xmax, ymax = ur
+        return (xmin, ymin, xmax, ymax)
 
     def convert_geom(self, clob, geo_field):
-        if clob:
-            return Geometry(clob.read(), geo_field.srid)
-        else:
-            return None
+        return Geometry(clob.read(), geo_field.srid) if clob else None
 
     def geo_db_type(self, f):
         """
@@ -226,39 +222,34 @@ class OracleOperations(DatabaseOperations, BaseSpatialOperations):
         # Getting the quoted table name as `geo_col`.
         geo_col = '%s.%s' % (qn(alias), qn(col))
 
-        # See if a Oracle Geometry function matches the lookup type next
-        lookup_info = self.geometry_functions.get(lookup_type, False)
-        if lookup_info:
-            # Lookup types that are tuples take tuple arguments, e.g., 'relate' and
-            # 'dwithin' lookup types.
-            if isinstance(lookup_info, tuple):
-                # First element of tuple is lookup type, second element is the type
-                # of the expected argument (e.g., str, float)
-                sdo_op, arg_type = lookup_info
-                geom = value[0]
-
-                # Ensuring that a tuple _value_ was passed in from the user
-                if not isinstance(value, tuple):
-                    raise ValueError('Tuple required for `%s` lookup type.' % lookup_type)
-                if len(value) != 2:
-                    raise ValueError('2-element tuple required for %s lookup type.' % lookup_type)
-
-                # Ensuring the argument type matches what we expect.
-                if not isinstance(value[1], arg_type):
-                    raise ValueError('Argument type should be %s, got %s instead.' % (arg_type, type(value[1])))
-
-                if lookup_type == 'relate':
-                    # The SDORelate class handles construction for these queries,
-                    # and verifies the mask argument.
-                    return sdo_op(value[1]).as_sql(geo_col, self.get_geom_placeholder(field, geom))
-                else:
-                    # Otherwise, just call the `as_sql` method on the SDOOperation instance.
-                    return sdo_op.as_sql(geo_col, self.get_geom_placeholder(field, geom))
-            else:
+        if lookup_info := self.geometry_functions.get(lookup_type, False):
+            if not isinstance(lookup_info, tuple):
                 # Lookup info is a SDOOperation instance, whose `as_sql` method returns
                 # the SQL necessary for the geometry function call. For example:
                 #  SDO_CONTAINS("geoapp_country"."poly", SDO_GEOMTRY('POINT(5 23)', 4326)) = 'TRUE'
                 return lookup_info.as_sql(geo_col, self.get_geom_placeholder(field, value))
+            # First element of tuple is lookup type, second element is the type
+            # of the expected argument (e.g., str, float)
+            sdo_op, arg_type = lookup_info
+            geom = value[0]
+
+            # Ensuring that a tuple _value_ was passed in from the user
+            if not isinstance(value, tuple):
+                raise ValueError('Tuple required for `%s` lookup type.' % lookup_type)
+            if len(value) != 2:
+                raise ValueError('2-element tuple required for %s lookup type.' % lookup_type)
+
+            # Ensuring the argument type matches what we expect.
+            if not isinstance(value[1], arg_type):
+                raise ValueError('Argument type should be %s, got %s instead.' % (arg_type, type(value[1])))
+
+            if lookup_type == 'relate':
+                # The SDORelate class handles construction for these queries,
+                # and verifies the mask argument.
+                return sdo_op(value[1]).as_sql(geo_col, self.get_geom_placeholder(field, geom))
+            else:
+                # Otherwise, just call the `as_sql` method on the SDOOperation instance.
+                return sdo_op.as_sql(geo_col, self.get_geom_placeholder(field, geom))
         elif lookup_type == 'isnull':
             # Handling 'isnull' lookup type
             return "%s IS %sNULL" % (geo_col, (not value and 'NOT ' or ''))

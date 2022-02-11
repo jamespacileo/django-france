@@ -36,9 +36,9 @@ class Feature(GDALBase):
         """
         if isinstance(index, basestring):
             i = self.index(index)
+        elif index < 0 or index > self.num_fields:
+            raise OGRIndexError('index out of range')
         else:
-            if index < 0 or index > self.num_fields:
-                raise OGRIndexError('index out of range')
             i = index
         return Field(self.ptr, i)
     

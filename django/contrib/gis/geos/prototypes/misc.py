@@ -16,7 +16,7 @@ def dbl_from_geom(func, num_geom=1):
     Argument is a Geometry, return type is double that is passed
     in by reference as the last argument.
     """
-    argtypes = [GEOM_PTR for i in xrange(num_geom)]
+    argtypes = [GEOM_PTR for _ in xrange(num_geom)]
     argtypes += [POINTER(c_double)]
     func.argtypes = argtypes
     func.restype = c_int # Status code returned

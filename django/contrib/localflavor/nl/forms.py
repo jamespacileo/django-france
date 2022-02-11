@@ -90,9 +90,7 @@ class NLSoFiNumberField(Field):
         if int(value) == 0:
             raise ValidationError(self.error_messages['invalid'])
 
-        checksum = 0
-        for i in range(9, 1, -1):
-            checksum += int(value[9-i]) * i
+        checksum = sum(int(value[9-i]) * i for i in range(9, 1, -1))
         checksum -= int(value[-1])
 
         if checksum % 11 != 0:

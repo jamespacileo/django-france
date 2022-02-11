@@ -86,10 +86,7 @@ class CLRutField(RegexField):
             code = code[:-1]
         while len(code) > 3 and '.' not in code[:3]:
             pos = code.find('.')
-            if pos == -1:
-                new_dot = -3
-            else:
-                new_dot = pos - 3
-            code = code[:new_dot] + '.' + code[new_dot:]
+            new_dot = -3 if pos == -1 else pos - 3
+            code = f'{code[:new_dot]}.{code[new_dot:]}'
         return u'%s-%s' % (code, verifier)
 

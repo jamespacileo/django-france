@@ -21,12 +21,9 @@ def ssn_check_digit(value):
 
     ssn = value.upper()
     total = 0
-    for i in range(0, 15):
+    for i in range(15):
         try:
-            if i % 2 == 0:
-                total += ssn_odd_chars[ssn[i]]
-            else:
-                total += ssn_even_chars[ssn[i]]
+            total += ssn_odd_chars[ssn[i]] if i % 2 == 0 else ssn_even_chars[ssn[i]]
         except KeyError:
             msg = "Character '%(char)s' is not allowed." % {'char': ssn[i]}
             raise ValueError(msg)
@@ -35,9 +32,7 @@ def ssn_check_digit(value):
 def vat_number_check_digit(vat_number):
     "Calculate Italian VAT number check digit."
     normalized_vat_number = smart_str(vat_number).zfill(10)
-    total = 0
-    for i in range(0, 10, 2):
-        total += int(normalized_vat_number[i])
+    total = sum(int(normalized_vat_number[i]) for i in range(0, 10, 2))
     for i in range(1, 11, 2):
         quotient , remainder = divmod(int(normalized_vat_number[i]) * 2, 10)
         total += quotient + remainder

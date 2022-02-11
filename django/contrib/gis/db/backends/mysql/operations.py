@@ -41,19 +41,18 @@ class MySQLOperations(DatabaseOperations, BaseSpatialOperations):
         MySQL does not support spatial transformations, there is no need to
         modify the placeholder based on the contents of the given value.
         """
-        if hasattr(value, 'expression'):
-            placeholder = '%s.%s' % tuple(map(self.quote_name, value.cols[value.expression]))
-        else:
-            placeholder = '%s(%%s)' % self.from_text
-        return placeholder
+        return (
+            '%s.%s' % tuple(map(self.quote_name, value.cols[value.expression]))
+            if hasattr(value, 'expression')
+            else '%s(%%s)' % self.from_text
+        )
 
     def spatial_lookup_sql(self, lvalue, lookup_type, value, field, qn):
         alias, col, db_type = lvalue
 
         geo_col = '%s.%s' % (qn(alias), qn(col))
 
-        lookup_info = self.geometry_functions.get(lookup_type, False)
-        if lookup_info:
+        if lookup_info := self.geometry_functions.get(lookup_type, False):
             return "%s(%s, %s)" % (lookup_info, geo_col,
                                    self.get_geom_placeholder(value, field.srid))
 

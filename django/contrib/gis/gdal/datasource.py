@@ -55,11 +55,7 @@ class DataSource(GDALBase):
     #### Python 'magic' routines ####
     def __init__(self, ds_input, ds_driver=False, write=False):
         # The write flag.
-        if write:
-            self._write = 1
-        else:
-            self._write = 0
-
+        self._write = 1 if write else 0
         # Registering all the drivers, this needs to be done
         #  _before_ we try to open up a data source.
         if not capi.get_driver_count():

@@ -23,10 +23,7 @@ class PTZipCodeField(RegexField):
 
     def clean(self,value):
         cleaned = super(PTZipCodeField, self).clean(value)
-        if len(cleaned) == 7:
-           return u'%s-%s' % (cleaned[:4],cleaned[4:])
-        else:
-           return cleaned
+        return u'%s-%s' % (cleaned[:4],cleaned[4:]) if len(cleaned) == 7 else cleaned
         
 class PTPhoneNumberField(Field):
     """
@@ -42,7 +39,6 @@ class PTPhoneNumberField(Field):
         if value in EMPTY_VALUES:
             return u''
         value = re.sub('(\.|\s)', '', smart_unicode(value))
-        m = phone_digits_re.search(value)
-        if m:
+        if m := phone_digits_re.search(value):
             return u'%s' % value
         raise ValidationError(self.error_messages['invalid'])

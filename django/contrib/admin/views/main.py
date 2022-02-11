@@ -55,10 +55,7 @@ class ChangeList(object):
         if ERROR_FLAG in self.params:
             del self.params[ERROR_FLAG]
 
-        if self.is_popup:
-            self.list_editable = ()
-        else:
-            self.list_editable = list_editable
+        self.list_editable = () if self.is_popup else list_editable
         self.order_field, self.order_type = self.get_ordering()
         self.query = request.GET.get(SEARCH_VAR, '')
         self.query_set = self.get_query_set()
@@ -134,7 +131,12 @@ class ChangeList(object):
         # options, then check the object's default ordering. If neither of
         # those exist, order descending by ID by default. Finally, look for
         # manually-specified ordering from the query string.
-        ordering = self.model_admin.ordering or lookup_opts.ordering or ['-' + lookup_opts.pk.name]
+        ordering = (
+            self.model_admin.ordering
+            or lookup_opts.ordering
+            or [f'-{lookup_opts.pk.name}']
+        )
+
 
         if ordering[0].startswith('-'):
             order_field, order_type = ordering[0][1:], 'desc'

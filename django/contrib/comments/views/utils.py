@@ -28,11 +28,11 @@ def next_redirect(data, default, default_view, **get_kwargs):
         if '#' in next:
             tmp = next.rsplit('#', 1)
             next = tmp[0]
-            anchor = '#' + tmp[1]
+            anchor = f'#{tmp[1]}'
         else:
             anchor = ''
 
-        joiner = ('?' in next) and '&' or '?'
+        joiner = '&' if '?' in next else '?'
         next += joiner + urllib.urlencode(get_kwargs) + anchor
     return HttpResponseRedirect(next)
 

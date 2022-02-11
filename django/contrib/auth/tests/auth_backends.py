@@ -141,10 +141,7 @@ class SimpleRowlevelBackend(object):
 
         if user.is_anonymous():
             return ['anon']
-        if user.username == 'test2':
-            return ['simple', 'advanced']
-        else:
-            return ['simple']
+        return ['simple', 'advanced'] if user.username == 'test2' else ['simple']
 
     def get_group_permissions(self, user, obj=None):
         if not obj:

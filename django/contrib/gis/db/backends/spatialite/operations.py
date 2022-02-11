@@ -145,10 +145,7 @@ class SpatiaLiteOperations(DatabaseOperations, BaseSpatialOperations):
         """
         Converts geometry WKT returned from a SpatiaLite aggregate.
         """
-        if wkt:
-            return Geometry(wkt, geo_field.srid)
-        else:
-            return None
+        return Geometry(wkt, geo_field.srid) if wkt else None
 
     def geo_db_type(self, f):
         """
@@ -186,7 +183,7 @@ class SpatiaLiteOperations(DatabaseOperations, BaseSpatialOperations):
         Transform() and GeomFromText() function call(s).
         """
         def transform_value(value, srid):
-            return not (value is None or value.srid == srid)
+            return value is not None and value.srid != srid
         if hasattr(value, 'expression'):
             if transform_value(value, f.srid):
                 placeholder = '%s(%%s, %s)' % (self.transform, f.srid)
@@ -209,12 +206,11 @@ class SpatiaLiteOperations(DatabaseOperations, BaseSpatialOperations):
         """
         cursor = self.connection._cursor()
         try:
-            try:
-                cursor.execute('SELECT %s' % func)
-                row = cursor.fetchone()
-            except:
-                # Responsibility of caller to perform error handling.
-                raise
+            cursor.execute('SELECT %s' % func)
+            row = cursor.fetchone()
+        except:
+            # Responsibility of caller to perform error handling.
+            raise
         finally:
             cursor.close()
         return row[0]
@@ -253,14 +249,12 @@ class SpatiaLiteOperations(DatabaseOperations, BaseSpatialOperations):
             # exception.
             if version is None: raise
 
-        m = self.version_regex.match(version)
-        if m:
-            major = int(m.group('major'))
-            minor1 = int(m.group('minor1'))
-            minor2 = int(m.group('minor2'))
-        else:
+        if not (m := self.version_regex.match(version)):
             raise Exception('Could not parse SpatiaLite version string: %s' % version)
 
+        major = int(m.group('major'))
+        minor1 = int(m.group('minor1'))
+        minor2 = int(m.group('minor2'))
         return (version, major, minor1, minor2)
 
     def spatial_aggregate_sql(self, agg):

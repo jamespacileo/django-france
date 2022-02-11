@@ -16,10 +16,7 @@ class PostGISCreation(DatabaseCreation):
             qn = self.connection.ops.quote_name
             db_table = model._meta.db_table
 
-            if f.geography:
-                # Geogrophy columns are created normally.
-                pass
-            else:
+            if not f.geography:
                 # Geometry columns are created by `AddGeometryColumn`
                 # stored procedure.
                 output.append(style.SQL_KEYWORD('SELECT ') +

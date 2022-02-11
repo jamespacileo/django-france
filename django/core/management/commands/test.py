@@ -24,7 +24,5 @@ class Command(BaseCommand):
         TestRunner = get_runner(settings)
 
         test_runner = TestRunner(verbosity=verbosity, interactive=interactive, failfast=failfast)
-        failures = test_runner.run_tests(test_labels)
-
-        if failures:
+        if failures := test_runner.run_tests(test_labels):
             sys.exit(bool(failures))

@@ -150,10 +150,8 @@ class IDLicensePlateField(Field):
                 raise ValidationError(self.error_messages['invalid'])
             if len(number) == 5 and not (12 <= int(suffix) <= 124):
                 raise ValidationError(self.error_messages['invalid'])
-        else:
-            # suffix must be non-numeric
-            if suffix is not None and re.match(r'^[A-Z]{,3}$', suffix) is None:
-                raise ValidationError(self.error_messages['invalid'])
+        elif suffix is not None and re.match(r'^[A-Z]{,3}$', suffix) is None:
+            raise ValidationError(self.error_messages['invalid'])
 
         return plate_number
 
@@ -188,10 +186,7 @@ class IDNationalIdentityNumberField(Field):
                 t1 = (int(year), int(month), int(day), 0, 0, 0, 0, 0, -1)
                 d = time.mktime(t1)
                 t2 = time.localtime(d)
-                if t1[:3] != t2[:3]:
-                    return False
-                else:
-                    return True
+                return t1[:3] == t2[:3]
             except (OverflowError, ValueError):
                 return False
 

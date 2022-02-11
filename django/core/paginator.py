@@ -26,11 +26,10 @@ class Paginator(object):
             raise PageNotAnInteger('That page number is not an integer')
         if number < 1:
             raise EmptyPage('That page number is less than 1')
-        if number > self.num_pages:
-            if number == 1 and self.allow_empty_first_page:
-                pass
-            else:
-                raise EmptyPage('That page contains no results')
+        if number > self.num_pages and (
+            number != 1 or not self.allow_empty_first_page
+        ):
+            raise EmptyPage('That page contains no results')
         return number
 
     def page(self, number):
@@ -100,17 +99,13 @@ class Page(object):
         i = 0
         try:
             while True:
-                v = self[i]
-                yield v
+                yield self[i]
                 i += 1
         except IndexError:
             return
 
     def __contains__(self, value):
-        for v in self:
-            if v == value:
-                return True
-        return False
+        return any(v == value for v in self)
 
     def index(self, value):
         for i, v in enumerate(self):
@@ -119,7 +114,7 @@ class Page(object):
         raise ValueError
 
     def count(self, value):
-        return sum([1 for v in self if v == value])
+        return sum(v == value for v in self)
 
     # End of compatibility methods.
 

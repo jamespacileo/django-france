@@ -34,9 +34,8 @@ class FallbackTest(BaseTest):
         """
         Return the storage totals from both cookie and session backends.
         """
-        total = (self.stored_cookie_messages_count(storage, response) +
+        return (self.stored_cookie_messages_count(storage, response) +
                  self.stored_session_messages_count(storage, response))
-        return total
 
     def test_get(self):
         request = self.get_request()

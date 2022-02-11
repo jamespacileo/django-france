@@ -47,7 +47,7 @@ def cell_count(inline_admin_form):
     for fieldset in inline_admin_form:
         # Loop through all the fields (one per cell)
         for line in fieldset:
-            for field in line:
+            for _ in line:
                 count += 1
     if inline_admin_form.formset.can_delete:
         # Delete checkbox

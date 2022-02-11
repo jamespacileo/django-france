@@ -32,7 +32,7 @@ Compiler library and Java version 6 or later."""
 
     for arg in args:
         if not arg.endswith(".js"):
-            arg = arg + ".js"
+            arg = f'{arg}.js'
         to_compress = os.path.expanduser(arg)
         if os.path.exists(to_compress):
             to_compress_min = "%s.min.js" % "".join(arg.rsplit(".js"))

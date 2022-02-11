@@ -67,7 +67,7 @@ class GEOSMutationTest(unittest.TestCase):
         for p in (Point(1,2,3), fromstr('POINT (1 2 3)')):
             p[0:2] = [4,5]
             for f in geos_function_tests:
-                self.assertEqual(f(q), f(p), 'Point ' + f.__name__)
+                self.assertEqual(f(q), f(p), f'Point {f.__name__}')
 
     def test04_LineStringMutations(self):
         'Testing LineString mutations'
@@ -85,7 +85,7 @@ class GEOSMutationTest(unittest.TestCase):
 
             lsa = LineString(ls.coords)
             for f in geos_function_tests:
-                self.assertEqual(f(lsa), f(ls), 'LineString ' + f.__name__)
+                self.assertEqual(f(lsa), f(ls), f'LineString {f.__name__}')
 
     def test05_Polygon(self):
         'Testing Polygon mutations'
@@ -109,7 +109,7 @@ class GEOSMutationTest(unittest.TestCase):
 
             lsa = Polygon(*pg.coords)
             for f in geos_function_tests:
-                self.assertEqual(f(lsa), f(pg), 'Polygon ' + f.__name__)
+                self.assertEqual(f(lsa), f(pg), f'Polygon {f.__name__}')
 
     def test06_Collection(self):
         'Testing Collection mutations'
@@ -122,7 +122,7 @@ class GEOSMutationTest(unittest.TestCase):
 
             lsa = MultiPoint(*map(Point,((5,5),(3,-2),(8,1))))
             for f in geos_function_tests:
-                self.assertEqual(f(lsa), f(mp), 'MultiPoint ' + f.__name__)
+                self.assertEqual(f(lsa), f(mp), f'MultiPoint {f.__name__}')
 
 def suite():
     s = unittest.TestSuite()

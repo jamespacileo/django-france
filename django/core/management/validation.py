@@ -67,10 +67,9 @@ def get_validation_errors(outfile, app=None):
                         mdigits_ok = True
                 except (ValueError, TypeError):
                     e.add(opts, mdigits_msg % f.name)
-                invalid_values_msg = '"%s": DecimalFields require a "max_digits" attribute value that is greater than the value of the "decimal_places" attribute.'
-                if decimalp_ok and mdigits_ok:
-                    if decimal_places >= max_digits:
-                        e.add(opts, invalid_values_msg % f.name)
+                if decimalp_ok and mdigits_ok and decimal_places >= max_digits:
+                    invalid_values_msg = '"%s": DecimalFields require a "max_digits" attribute value that is greater than the value of the "decimal_places" attribute.'
+                    e.add(opts, invalid_values_msg % f.name)
             if isinstance(f, models.FileField) and not f.upload_to:
                 e.add(opts, '"%s": FileFields require an "upload_to" attribute.' % f.name)
             if isinstance(f, models.ImageField):
@@ -145,7 +144,7 @@ def get_validation_errors(outfile, app=None):
                                 e.add(opts, "Reverse query name for field '%s' clashes with related field '%s.%s'. Add a related_name argument to the definition for '%s'." % (f.name, rel_opts.object_name, r.get_accessor_name(), f.name))
 
         seen_intermediary_signatures = []
-        for i, f in enumerate(opts.local_many_to_many):
+        for f in opts.local_many_to_many:
             # Check to see if the related m2m field will clash with any
             # existing fields, m2m fields, m2m related objects or related
             # objects
@@ -178,29 +177,28 @@ def get_validation_errors(outfile, app=None):
                                     from_model._meta.object_name
                                 )
                             )
-                    else:
-                        if rel_to == from_model:
-                            if seen_from:
-                                e.add(opts, "Intermediary model %s has more "
-                                    "than one foreign key to %s, which is "
-                                    "ambiguous and is not permitted." % (
-                                        f.rel.through._meta.object_name,
-                                         from_model._meta.object_name
-                                     )
+                    elif rel_to == from_model:
+                        if seen_from:
+                            e.add(opts, "Intermediary model %s has more "
+                                "than one foreign key to %s, which is "
+                                "ambiguous and is not permitted." % (
+                                    f.rel.through._meta.object_name,
+                                     from_model._meta.object_name
                                  )
-                            else:
-                                seen_from = True
-                        elif rel_to == to_model:
-                            if seen_to:
-                                e.add(opts, "Intermediary model %s has more "
-                                    "than one foreign key to %s, which is "
-                                    "ambiguous and is not permitted." % (
-                                        f.rel.through._meta.object_name,
-                                        rel_to._meta.object_name
-                                    )
+                             )
+                        else:
+                            seen_from = True
+                    elif rel_to == to_model:
+                        if seen_to:
+                            e.add(opts, "Intermediary model %s has more "
+                                "than one foreign key to %s, which is "
+                                "ambiguous and is not permitted." % (
+                                    f.rel.through._meta.object_name,
+                                    rel_to._meta.object_name
                                 )
-                            else:
-                                seen_to = True
+                            )
+                        else:
+                            seen_to = True
                 if f.rel.through not in models.get_models(include_auto_created=True):
                     e.add(opts, "'%s' specifies an m2m relation through model "
                         "%s, which has not been installed." % (f.name, f.rel.through)
@@ -236,7 +234,10 @@ def get_validation_errors(outfile, app=None):
                     "which has not been installed" % (f.name, f.rel.through)
                 )
             elif isinstance(f, GenericRelation):
-                if not any([isinstance(vfield, GenericForeignKey) for vfield in f.rel.to._meta.virtual_fields]):
+                if not any(
+                    isinstance(vfield, GenericForeignKey)
+                    for vfield in f.rel.to._meta.virtual_fields
+                ):
                     e.add(opts, "Model '%s' must have a GenericForeignKey in "
                         "order to create a GenericRelation that points to it."
                         % f.rel.to.__name__

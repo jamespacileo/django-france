@@ -42,12 +42,11 @@ class GeoWhereNode(WhereNode):
 
     def make_atom(self, child, qn, connection):
         lvalue, lookup_type, value_annot, params_or_value = child
-        if isinstance(lvalue, GeoConstraint):
-            data, params = lvalue.process(lookup_type, params_or_value, connection)
-            spatial_sql = connection.ops.spatial_lookup_sql(data, lookup_type, params_or_value, lvalue.field, qn)
-            return spatial_sql, params
-        else:
+        if not isinstance(lvalue, GeoConstraint):
             return super(GeoWhereNode, self).make_atom(child, qn, connection)
+        data, params = lvalue.process(lookup_type, params_or_value, connection)
+        spatial_sql = connection.ops.spatial_lookup_sql(data, lookup_type, params_or_value, lvalue.field, qn)
+        return spatial_sql, params
 
     @classmethod
     def _check_geo_field(cls, opts, lookup):
@@ -83,7 +82,4 @@ class GeoWhereNode(WhereNode):
             return False
 
         # Finally, make sure we got a Geographic field and return.
-        if isinstance(geo_fld, GeometryField):
-            return geo_fld
-        else:
-            return False
+        return geo_fld if isinstance(geo_fld, GeometryField) else False

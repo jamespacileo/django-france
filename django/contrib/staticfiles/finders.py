@@ -75,8 +75,7 @@ class FileSystemFinder(BaseFinder):
         """
         matches = []
         for prefix, root in self.locations:
-            matched_path = self.find_location(root, path, prefix)
-            if matched_path:
+            if matched_path := self.find_location(root, path, prefix):
                 if not all:
                     return matched_path
                 matches.append(matched_path)
@@ -143,8 +142,7 @@ class AppDirectoriesFinder(BaseFinder):
         """
         matches = []
         for app in self.apps:
-            match = self.find_in_app(app, path)
-            if match:
+            if match := self.find_in_app(app, path):
                 if not all:
                     return match
                 matches.append(match)
@@ -154,8 +152,7 @@ class AppDirectoriesFinder(BaseFinder):
         """
         Find a requested static file in an app's static locations.
         """
-        storage = self.storages.get(app, None)
-        if storage:
+        if storage := self.storages.get(app, None):
             if storage.prefix:
                 prefix = '%s%s' % (storage.prefix, os.sep)
                 if not path.startswith(prefix):
@@ -163,8 +160,7 @@ class AppDirectoriesFinder(BaseFinder):
                 path = path[len(prefix):]
             # only try to find a file if the source dir actually exists
             if storage.exists(path):
-                matched_path = storage.path(path)
-                if matched_path:
+                if matched_path := storage.path(path):
                     return matched_path
 
 

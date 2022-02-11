@@ -22,7 +22,7 @@ class SessionStore(SessionBase):
         # because the cache is missing. So we try for a (large) number of times
         # and then raise an exception. That's the risk you shoulder if using
         # cache backing.
-        for i in xrange(10000):
+        for _ in xrange(10000):
             self.session_key = self._get_new_session_key()
             try:
                 self.save(must_create=True)
@@ -33,19 +33,14 @@ class SessionStore(SessionBase):
         raise RuntimeError("Unable to create a new session key.")
 
     def save(self, must_create=False):
-        if must_create:
-            func = self._cache.add
-        else:
-            func = self._cache.set
+        func = self._cache.add if must_create else self._cache.set
         result = func(self.session_key, self._get_session(no_load=must_create),
                 self.get_expiry_age())
         if must_create and not result:
             raise CreateError
 
     def exists(self, session_key):
-        if self._cache.has_key(session_key):
-            return True
-        return False
+        return bool(self._cache.has_key(session_key))
 
     def delete(self, session_key=None):
         if session_key is None:

@@ -18,20 +18,18 @@ def ptr_byref(args, offset=-1):
 
 def check_bool(result, func, cargs):
     "Returns the boolean evaluation of the value."
-    if bool(result): return True
-    else: return False
+    return bool(result)
 
 ### String checking Routines ###
 def check_const_string(result, func, cargs, offset=None):
     """
     Similar functionality to `check_string`, but does not free the pointer.
     """
-    if offset:
-        check_err(result)
-        ptr = ptr_byref(cargs, offset)
-        return ptr.value
-    else:
+    if not offset:
         return result
+    check_err(result)
+    ptr = ptr_byref(cargs, offset)
+    return ptr.value
 
 def check_string(result, func, cargs, offset=-1, str_result=False):
     """
@@ -45,8 +43,7 @@ def check_string(result, func, cargs, offset=-1, str_result=False):
     if str_result:
         # For routines that return a string.
         ptr = result
-        if not ptr: s = None
-        else: s = string_at(result)
+        s = None if not ptr else string_at(result)
     else:
         # Error-code return specified.
         check_err(result)
@@ -63,8 +60,7 @@ def check_string(result, func, cargs, offset=-1, str_result=False):
 ### Envelope checking ###
 def check_envelope(result, func, cargs, offset=-1):
     "Checks a function that returns an OGR Envelope by reference."
-    env = ptr_byref(cargs, offset)
-    return env
+    return ptr_byref(cargs, offset)
 
 ### Geometry error-checking routines ###
 def check_geom(result, func, cargs):

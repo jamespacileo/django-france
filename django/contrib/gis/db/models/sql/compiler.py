@@ -26,10 +26,7 @@ class GeoSQLCompiler(compiler.SQLCompiler):
         result = ['(%s) AS %s' % (self.get_extra_select_format(alias) % col[0], qn2(alias))
                   for alias, col in self.query.extra_select.iteritems()]
         aliases = set(self.query.extra_select.keys())
-        if with_aliases:
-            col_aliases = aliases.copy()
-        else:
-            col_aliases = set()
+        col_aliases = aliases.copy() if with_aliases else set()
         if self.query.select:
             only_load = self.deferred_to_columns()
             # This loop customized for GeoQuery.
@@ -174,14 +171,16 @@ class GeoSQLCompiler(compiler.SQLCompiler):
         if self.query.aggregates:
             # If we have an aggregate annotation, must extend the aliases
             # so their corresponding row values are included.
-            aliases.extend([None for i in xrange(len(self.query.aggregates))])
+            aliases.extend([None for _ in xrange(len(self.query.aggregates))])
 
         # Have to set a starting row number offset that is used for
         # determining the correct starting row index -- needed for
         # doing pagination with Oracle.
         rn_offset = 0
-        if self.connection.ops.oracle:
-            if self.query.high_mark is not None or self.query.low_mark: rn_offset = 1
+        if self.connection.ops.oracle and (
+            self.query.high_mark is not None or self.query.low_mark
+        ):
+            rn_offset = 1
         index_start = rn_offset + len(aliases)
 
         # Converting any extra selection values (e.g., geometries and
@@ -193,8 +192,11 @@ class GeoSQLCompiler(compiler.SQLCompiler):
         if self.connection.ops.oracle or getattr(self.query, 'geo_values', False):
             # We resolve the rest of the columns if we're on Oracle or if
             # the `geo_values` attribute is defined.
-            for value, field in map(None, row[index_start:], fields):
-                values.append(self.query.convert_values(value, field, connection=self.connection))
+            values.extend(
+                self.query.convert_values(value, field, connection=self.connection)
+                for value, field in map(None, row[index_start:], fields)
+            )
+
         else:
             values.extend(row[index_start:])
         return tuple(values)
@@ -203,7 +205,7 @@ class GeoSQLCompiler(compiler.SQLCompiler):
     def get_extra_select_format(self, alias):
         sel_fmt = '%s'
         if alias in self.query.custom_select:
-            sel_fmt = sel_fmt % self.query.custom_select[alias]
+            sel_fmt %= self.query.custom_select[alias]
         return sel_fmt
 
     def get_field_select(self, field, alias=None, column=None):
@@ -216,11 +218,11 @@ class GeoSQLCompiler(compiler.SQLCompiler):
         column name, rather than using the `column` attribute on `field`.
         """
         sel_fmt = self.get_select_format(field)
-        if field in self.query.custom_select:
-            field_sel = sel_fmt % self.query.custom_select[field]
-        else:
-            field_sel = sel_fmt % self._field_column(field, alias, column)
-        return field_sel
+        return (
+            sel_fmt % self.query.custom_select[field]
+            if field in self.query.custom_select
+            else sel_fmt % self._field_column(field, alias, column)
+        )
 
     def get_select_format(self, fld):
         """

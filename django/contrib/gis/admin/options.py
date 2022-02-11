@@ -53,13 +53,12 @@ class GeoModelAdmin(ModelAdmin):
         Overloaded from ModelAdmin so that an OpenLayersWidget is used
         for viewing/editing GeometryFields.
         """
-        if isinstance(db_field, models.GeometryField):
-            request = kwargs.pop('request', None)
-            # Setting the widget with the newly defined widget.
-            kwargs['widget'] = self.get_map_widget(db_field)
-            return db_field.formfield(**kwargs)
-        else:
+        if not isinstance(db_field, models.GeometryField):
             return super(GeoModelAdmin, self).formfield_for_dbfield(db_field, **kwargs)
+        request = kwargs.pop('request', None)
+        # Setting the widget with the newly defined widget.
+        kwargs['widget'] = self.get_map_widget(db_field)
+        return db_field.formfield(**kwargs)
 
     def get_map_widget(self, db_field):
         """
@@ -115,11 +114,7 @@ from django.contrib.gis import gdal
 if gdal.HAS_GDAL:
     # Use the official spherical mercator projection SRID on versions
     # of GDAL that support it; otherwise, fallback to 900913.
-    if gdal.GDAL_VERSION >= (1, 7):
-        spherical_mercator_srid = 3857
-    else:
-        spherical_mercator_srid = 900913
-
+    spherical_mercator_srid = 3857 if gdal.GDAL_VERSION >= (1, 7) else 900913
     class OSMGeoAdmin(GeoModelAdmin):
         map_template = 'gis/admin/osm.html'
         extra_js = ['http://www.openstreetmap.org/openlayers/OpenStreetMap.js']
