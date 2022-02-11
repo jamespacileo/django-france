@@ -18,13 +18,7 @@ def csrf(request):
     """
     def _get_val():
         token = get_token(request)
-        if token is None:
-            # In order to be able to provide debugging info in the
-            # case of misconfiguration, we use a sentinel value
-            # instead of returning an empty dict.
-            return 'NOTPROVIDED'
-        else:
-            return token
+        return 'NOTPROVIDED' if token is None else token
     _get_val = lazy(_get_val, str)
 
     return {'csrf_token': _get_val() }
@@ -41,9 +35,11 @@ def debug(request):
 def i18n(request):
     from django.utils import translation
 
-    context_extras = {}
-    context_extras['LANGUAGES'] = settings.LANGUAGES
-    context_extras['LANGUAGE_CODE'] = translation.get_language()
+    context_extras = {
+        'LANGUAGES': settings.LANGUAGES,
+        'LANGUAGE_CODE': translation.get_language(),
+    }
+
     context_extras['LANGUAGE_BIDI'] = translation.get_language_bidi()
 
     return context_extras

@@ -31,14 +31,12 @@ class ROCIFField(RegexField):
         if value in EMPTY_VALUES:
             return u''
         # strip RO part
-        if value[0:2] == 'RO':
+        if value[:2] == 'RO':
             value = value[2:]
         key = '753217532'[::-1]
         value = value[::-1]
         key_iter = iter(key)
-        checksum = 0
-        for digit in value[1:]:
-            checksum += int(digit) * int(key_iter.next())
+        checksum = sum(int(digit) * int(key_iter.next()) for digit in value[1:])
         checksum = checksum * 10 % 11
         if checksum == 10:
             checksum = 0
@@ -73,12 +71,9 @@ class ROCNPField(RegexField):
             datetime.date(int(value[1:3]),int(value[3:5]),int(value[5:7]))
         except:
             raise ValidationError(self.error_messages['invalid'])
-        # checksum
-        key = '279146358279'
-        checksum = 0
         value_iter = iter(value)
-        for digit in key:
-            checksum += int(digit) * int(value_iter.next())
+        key = '279146358279'
+        checksum = sum(int(digit) * int(value_iter.next()) for digit in key)
         checksum %= 11
         if checksum == 10:
             checksum = 1
@@ -116,9 +111,7 @@ class ROCountyField(Field):
             if value in entry:
                 return value
         # search for county name
-        normalized_CC = []
-        for entry in COUNTIES_CHOICES:
-            normalized_CC.append((entry[0],entry[1].upper()))
+        normalized_CC = [(entry[0],entry[1].upper()) for entry in COUNTIES_CHOICES]
         for entry in normalized_CC:
             if entry[1] == value:
                 return entry[0]
@@ -157,14 +150,13 @@ class ROIBANField(RegexField):
         value = value.replace('-','')
         value = value.replace(' ','')
         value = value.upper()
-        if value[0:2] != 'RO':
+        if value[:2] != 'RO':
             raise ValidationError(self.error_messages['invalid'])
-        numeric_format = ''
-        for char in value[4:] + value[0:4]:
-            if char.isalpha():
-                numeric_format += str(ord(char) - 55)
-            else:
-                numeric_format += char
+        numeric_format = ''.join(
+            str(ord(char) - 55) if char.isalpha() else char
+            for char in value[4:] + value[:4]
+        )
+
         if int(numeric_format) % 97 != 1:
             raise ValidationError(self.error_messages['invalid'])
         return value

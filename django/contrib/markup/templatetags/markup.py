@@ -53,24 +53,21 @@ def markdown(value, arg=''):
             raise template.TemplateSyntaxError("Error in {% markdown %} filter: The Python markdown library isn't installed.")
         return force_unicode(value)
     else:
-        # markdown.version was first added in 1.6b. The only version of markdown
-        # to fully support extensions before 1.6b was the shortlived 1.6a.
-        if hasattr(markdown, 'version'):
-            extensions = [e for e in arg.split(",") if e]
-            if len(extensions) > 0 and extensions[0] == "safe":
-                extensions = extensions[1:]
-                safe_mode = True
-            else:
-                safe_mode = False
-
-            # Unicode support only in markdown v1.7 or above. Version_info
-            # exist only in markdown v1.6.2rc-2 or above.
-            if getattr(markdown, "version_info", None) < (1,7):
-                return mark_safe(force_unicode(markdown.markdown(smart_str(value), extensions, safe_mode=safe_mode)))
-            else:
-                return mark_safe(markdown.markdown(force_unicode(value), extensions, safe_mode=safe_mode))
-        else:
+        if not hasattr(markdown, 'version'):
             return mark_safe(force_unicode(markdown.markdown(smart_str(value))))
+        extensions = [e for e in arg.split(",") if e]
+        if extensions and extensions[0] == "safe":
+            extensions = extensions[1:]
+            safe_mode = True
+        else:
+            safe_mode = False
+
+        # Unicode support only in markdown v1.7 or above. Version_info
+        # exist only in markdown v1.6.2rc-2 or above.
+        if getattr(markdown, "version_info", None) < (1,7):
+            return mark_safe(force_unicode(markdown.markdown(smart_str(value), extensions, safe_mode=safe_mode)))
+        else:
+            return mark_safe(markdown.markdown(force_unicode(value), extensions, safe_mode=safe_mode))
 markdown.is_safe = True
 
 def restructuredtext(value):

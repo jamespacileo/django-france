@@ -20,10 +20,7 @@ class EmailBackend(BaseEmailBackend):
         self.port = port or settings.EMAIL_PORT
         self.username = username or settings.EMAIL_HOST_USER
         self.password = password or settings.EMAIL_HOST_PASSWORD
-        if use_tls is None:
-            self.use_tls = settings.EMAIL_USE_TLS
-        else:
-            self.use_tls = use_tls
+        self.use_tls = settings.EMAIL_USE_TLS if use_tls is None else use_tls
         self.connection = None
         self._lock = threading.RLock()
 
@@ -54,16 +51,15 @@ class EmailBackend(BaseEmailBackend):
     def close(self):
         """Closes the connection to the email server."""
         try:
-            try:
-                self.connection.quit()
-            except socket.sslerror:
-                # This happens when calling quit() on a TLS connection
-                # sometimes.
-                self.connection.close()
-            except:
-                if self.fail_silently:
-                    return
-                raise
+            self.connection.quit()
+        except socket.sslerror:
+            # This happens when calling quit() on a TLS connection
+            # sometimes.
+            self.connection.close()
+        except:
+            if self.fail_silently:
+                return
+            raise
         finally:
             self.connection = None
 
@@ -83,8 +79,7 @@ class EmailBackend(BaseEmailBackend):
                 return
             num_sent = 0
             for message in email_messages:
-                sent = self._send(message)
-                if sent:
+                if sent := self._send(message):
                     num_sent += 1
             if new_conn_created:
                 self.close()

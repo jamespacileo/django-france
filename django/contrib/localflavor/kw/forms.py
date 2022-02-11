@@ -27,10 +27,7 @@ class KWCivilIDNumberField(Field):
 
     def has_valid_checksum(self, value):
         weight = (2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2)
-        calculated_checksum = 0
-        for i in range(11):
-            calculated_checksum += int(value[i]) * weight[i]
-
+        calculated_checksum = sum(int(value[i]) * weight[i] for i in range(11))
         remainder = calculated_checksum % 11
         checkdigit = 11 - remainder
         if checkdigit != int(value[11]):

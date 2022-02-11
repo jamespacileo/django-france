@@ -36,12 +36,12 @@ def login(request, template_name='registration/login.html',
             netloc = urlparse.urlparse(redirect_to)[1]
 
             # Use default setting if redirect_to is empty
-            if not redirect_to:
-                redirect_to = settings.LOGIN_REDIRECT_URL
-
-            # Security check -- don't allow redirection to a different
-            # host.
-            elif netloc and netloc != request.get_host():
+            if (
+                not redirect_to
+                or redirect_to
+                and netloc
+                and netloc != request.get_host()
+            ):
                 redirect_to = settings.LOGIN_REDIRECT_URL
 
             # Okay, security checks complete. Log the user in.
@@ -76,26 +76,24 @@ def logout(request, next_page=None,
     Logs out the user and displays 'You are logged out' message.
     """
     auth_logout(request)
-    redirect_to = request.REQUEST.get(redirect_field_name, '')
-    if redirect_to:
+    if redirect_to := request.REQUEST.get(redirect_field_name, ''):
         netloc = urlparse.urlparse(redirect_to)[1]
         # Security check -- don't allow redirection to a different host.
         if not (netloc and netloc != request.get_host()):
             return HttpResponseRedirect(redirect_to)
 
-    if next_page is None:
-        current_site = get_current_site(request)
-        context = {
-            'site': current_site,
-            'site_name': current_site.name,
-            'title': _('Logged out')
-        }
-        context.update(extra_context or {})
-        return render_to_response(template_name, context,
-                                  context_instance=RequestContext(request, current_app=current_app))
-    else:
+    if next_page is not None:
         # Redirect to this page until the session has been cleared.
         return HttpResponseRedirect(next_page or request.path)
+    current_site = get_current_site(request)
+    context = {
+        'site': current_site,
+        'site_name': current_site.name,
+        'title': _('Logged out')
+    }
+    context.update(extra_context or {})
+    return render_to_response(template_name, context,
+                              context_instance=RequestContext(request, current_app=current_app))
 
 def logout_then_login(request, login_url=None, current_app=None, extra_context=None):
     """

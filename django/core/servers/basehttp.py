@@ -7,6 +7,7 @@ This is a simple server for use in testing or debugging Django apps. It hasn't
 been reviewed for security issues. Don't use it for production use.
 """
 
+
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import os
 import re
@@ -25,9 +26,9 @@ from django.contrib.staticfiles import handlers
 __version__ = "0.1"
 __all__ = ['WSGIServer','WSGIRequestHandler']
 
-server_version = "WSGIServer/" + __version__
-sys_version = "Python/" + sys.version.split()[0]
-software_version = server_version + ' ' + sys_version
+server_version = f'WSGIServer/{__version__}'
+sys_version = f'Python/{sys.version.split()[0]}'
+software_version = f'{server_version} {sys_version}'
 
 class WSGIServerException(Exception):
     pass
@@ -42,8 +43,7 @@ class FileWrapper(object):
             self.close = filelike.close
 
     def __getitem__(self,key):
-        data = self.filelike.read(self.blksize)
-        if data:
+        if data := self.filelike.read(self.blksize):
             return data
         raise IndexError
 
@@ -51,8 +51,7 @@ class FileWrapper(object):
         return self
 
     def next(self):
-        data = self.filelike.read(self.blksize)
-        if data:
+        if data := self.filelike.read(self.blksize):
             return data
         raise StopIteration
 
@@ -65,14 +64,13 @@ def _formatparam(param, value=None, quote=1):
 
     This will quote the value if needed or if quote is true.
     """
-    if value is not None and len(value) > 0:
-        if quote or tspecials.search(value):
-            value = value.replace('\\', '\\\\').replace('"', r'\"')
-            return '%s="%s"' % (param, value)
-        else:
-            return '%s=%s' % (param, value)
-    else:
+    if value is None or len(value) <= 0:
         return param
+    if quote or tspecials.search(value):
+        value = value.replace('\\', '\\\\').replace('"', r'\"')
+        return '%s="%s"' % (param, value)
+    else:
+        return '%s=%s' % (param, value)
 
 class Headers(object):
     """Manage a collection of HTTP response headers"""
@@ -179,11 +177,10 @@ class Headers(object):
         If there is no header named 'name', add a new header with name 'name'
         and value 'value'."""
         result = self.get(name)
-        if result is None:
-            self._headers.append((name,value))
-            return value
-        else:
+        if result is not None:
             return result
+        self._headers.append((name,value))
+        return value
 
     def add_header(self, _name, _value, **_params):
         """Extended header setting.
@@ -214,10 +211,7 @@ class Headers(object):
 def guess_scheme(environ):
     """Return a guess for whether 'wsgi.url_scheme' should be 'http' or 'https'
     """
-    if environ.get("HTTPS") in ('yes','on','1'):
-        return 'https'
-    else:
-        return 'http'
+    return 'https' if environ.get("HTTPS") in ('yes','on','1') else 'http'
 
 _hop_headers = {
     'connection':1, 'keep-alive':1, 'proxy-authenticate':1,
@@ -411,8 +405,8 @@ class ServerHandler(object):
         length = len(data)
         if length > 33554432:
             offset = 0
+            chunk_size = min(33554432, length)
             while offset < length:
-                chunk_size = min(33554432, length)
                 self._write(data[offset:offset+chunk_size])
                 self._flush()
                 offset += chunk_size
@@ -445,8 +439,6 @@ class ServerHandler(object):
         if not self.headers_sent:
             self.headers['Content-Length'] = "0"
             self.send_headers()
-        else:
-            pass # XXX check if content-length was too short?
 
     def close(self):
         try:
@@ -573,11 +565,7 @@ class WSGIRequestHandler(BaseHTTPRequestHandler):
         env = self.server.base_environ.copy()
         env['SERVER_PROTOCOL'] = self.request_version
         env['REQUEST_METHOD'] = self.command
-        if '?' in self.path:
-            path,query = self.path.split('?',1)
-        else:
-            path,query = self.path,''
-
+        path,query = self.path.split('?',1) if '?' in self.path else (self.path, '')
         env['PATH_INFO'] = urllib.unquote(path)
         env['QUERY_STRING'] = query
         env['REMOTE_ADDR'] = self.client_address[0]
@@ -587,19 +575,19 @@ class WSGIRequestHandler(BaseHTTPRequestHandler):
         else:
             env['CONTENT_TYPE'] = self.headers.typeheader
 
-        length = self.headers.getheader('content-length')
-        if length:
+        if length := self.headers.getheader('content-length'):
             env['CONTENT_LENGTH'] = length
 
         for h in self.headers.headers:
             k,v = h.split(':',1)
-            k=k.replace('-','_').upper(); v=v.strip()
+            k=k.replace('-','_').upper()
+            v=v.strip()
             if k in env:
                 continue                    # skip content length, type,etc.
             if 'HTTP_'+k in env:
-                env['HTTP_'+k] += ','+v     # comma-separate multiple headers
+                env['HTTP_'+k] += f',{v}'
             else:
-                env['HTTP_'+k] = v
+                env[f'HTTP_{k}'] = v
         return env
 
     def get_stderr(self):

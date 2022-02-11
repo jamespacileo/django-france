@@ -313,10 +313,7 @@ class PostGISOperations(DatabaseOperations, BaseSpatialOperations):
         """
         Converts the geometry returned from PostGIS aggretates.
         """
-        if hex:
-            return Geometry(hex)
-        else:
-            return None
+        return Geometry(hex) if hex else None
 
     def geo_db_type(self, f):
         """
@@ -325,17 +322,16 @@ class PostGISOperations(DatabaseOperations, BaseSpatialOperations):
         the `AddGeometryColumn` stored procedure, unless the field
         has been specified to be of geography type instead.
         """
-        if f.geography:
-            if not self.geography:
-                raise NotImplementedError('PostGIS 1.5 required for geography column support.')
-
-            if f.srid != 4326:
-                raise NotImplementedError('PostGIS 1.5 supports geography columns '
-                                          'only with an SRID of 4326.')
-
-            return 'geography(%s,%d)'% (f.geom_type, f.srid)
-        else:
+        if not f.geography:
             return None
+        if not self.geography:
+            raise NotImplementedError('PostGIS 1.5 required for geography column support.')
+
+        if f.srid != 4326:
+            raise NotImplementedError('PostGIS 1.5 supports geography columns '
+                                      'only with an SRID of 4326.')
+
+        return 'geography(%s,%d)'% (f.geom_type, f.srid)
 
     def get_distance(self, f, dist_val, lookup_type):
         """
@@ -348,22 +344,16 @@ class PostGISOperations(DatabaseOperations, BaseSpatialOperations):
         the newly introduced geography column type introudced in PostGIS 1.5.
         """
         # Getting the distance parameter and any options.
-        if len(dist_val) == 1:
-            value, option = dist_val[0], None
-        else:
-            value, option = dist_val
-
+        value, option = (dist_val[0], None) if len(dist_val) == 1 else dist_val
         # Shorthand boolean flags.
         geodetic = f.geodetic(self.connection)
         geography = f.geography and self.geography
 
         if isinstance(value, Distance):
-            if geography:
-                dist_param = value.m
-            elif geodetic:
-                if lookup_type == 'dwithin':
-                    raise ValueError('Only numeric values of degree units are '
-                                     'allowed on geographic DWithin queries.')
+            if not geography and geodetic and lookup_type == 'dwithin':
+                raise ValueError('Only numeric values of degree units are '
+                                 'allowed on geographic DWithin queries.')
+            elif not geography and geodetic or geography:
                 dist_param = value.m
             else:
                 dist_param = getattr(value, Distance.unit_attname(f.units_name(self.connection)))
@@ -405,12 +395,11 @@ class PostGISOperations(DatabaseOperations, BaseSpatialOperations):
         """
         cursor = self.connection._cursor()
         try:
-            try:
-                cursor.execute('SELECT %s()' % func)
-                row = cursor.fetchone()
-            except:
-                # Responsibility of callers to perform error handling.
-                raise
+            cursor.execute('SELECT %s()' % func)
+            row = cursor.fetchone()
+        except:
+            # Responsibility of callers to perform error handling.
+            raise
         finally:
             # Close out the connection.  See #9437.
             self.connection.close()
@@ -443,15 +432,12 @@ class PostGISOperations(DatabaseOperations, BaseSpatialOperations):
         """
         # Getting the PostGIS version
         version = self.postgis_lib_version()
-        m = self.version_regex.match(version)
-
-        if m:
-            major = int(m.group('major'))
-            minor1 = int(m.group('minor1'))
-            minor2 = int(m.group('minor2'))
-        else:
+        if not (m := self.version_regex.match(version)):
             raise Exception('Could not parse PostGIS version string: %s' % version)
 
+        major = int(m.group('major'))
+        minor1 = int(m.group('minor1'))
+        minor2 = int(m.group('minor2'))
         return (version, major, minor1, minor2)
 
     def proj_version_tuple(self):
@@ -461,8 +447,7 @@ class PostGISOperations(DatabaseOperations, BaseSpatialOperations):
         """
         proj_regex = re.compile(r'(\d+)\.(\d+)\.(\d+)')
         proj_ver_str = self.postgis_proj_version()
-        m = proj_regex.search(proj_ver_str)
-        if m:
+        if m := proj_regex.search(proj_ver_str):
             return tuple(map(int, [m.group(1), m.group(2), m.group(3)]))
         else:
             raise Exception('Could not determine PROJ.4 version from PostGIS.')
@@ -492,14 +477,14 @@ class PostGISOperations(DatabaseOperations, BaseSpatialOperations):
         geo_col = '%s.%s' % (qn(alias), qn(col))
 
         if lookup_type in self.geometry_operators:
-            if field.geography and not lookup_type in self.geography_operators:
+            if field.geography and lookup_type not in self.geography_operators:
                 raise ValueError('PostGIS geography does not support the '
                                  '"%s" lookup.' % lookup_type)
             # Handling a PostGIS operator.
             op = self.geometry_operators[lookup_type]
             return op.as_sql(geo_col, self.get_geom_placeholder(field, value))
         elif lookup_type in self.geometry_functions:
-            if field.geography and not lookup_type in self.geography_functions:
+            if field.geography and lookup_type not in self.geography_functions:
                 raise ValueError('PostGIS geography type does not support the '
                                  '"%s" lookup.' % lookup_type)
 

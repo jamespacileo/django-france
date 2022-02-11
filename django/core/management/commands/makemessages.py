@@ -36,7 +36,7 @@ def handle_extensions(extensions=('html',)):
     # we don't want *.py files here because of the way non-*.py files
     # are handled in make_messages() (they are copied to file.ext.py files to
     # trick xgettext to parse them as Python files)
-    return set([x for x in ext_list if x != '.py'])
+    return {x for x in ext_list if x != '.py'}
 
 def _popen(cmd):
     """
@@ -55,17 +55,13 @@ def walk(root, topdown=True, onerror=None, followlinks=False):
             for d in dirnames:
                 p = os.path.join(dirpath, d)
                 if os.path.islink(p):
-                    for link_dirpath, link_dirnames, link_filenames in walk(p):
-                        yield (link_dirpath, link_dirnames, link_filenames)
+                    yield from walk(p)
 
 def is_ignored(path, ignore_patterns):
     """
     Helper function to check if the given path should be ignored or not.
     """
-    for pattern in ignore_patterns:
-        if fnmatch.fnmatchcase(path, pattern):
-            return True
-    return False
+    return any(fnmatch.fnmatchcase(path, pattern) for pattern in ignore_patterns)
 
 def find_files(root, ignore_patterns, verbosity, symlinks=False):
     """
@@ -91,15 +87,11 @@ def copy_plural_forms(msgs, locale, domain, verbosity):
     """
     import django
     django_dir = os.path.normpath(os.path.join(os.path.dirname(django.__file__)))
-    if domain == 'djangojs':
-        domains = ('djangojs', 'django')
-    else:
-        domains = ('django',)
+    domains = ('djangojs', 'django') if domain == 'djangojs' else ('django', )
     for domain in domains:
         django_po = os.path.join(django_dir, 'conf', 'locale', locale, 'LC_MESSAGES', '%s.po' % domain)
         if os.path.exists(django_po):
-            m = plural_forms_re.search(open(django_po, 'rU').read())
-            if m:
+            if m := plural_forms_re.search(open(django_po, 'rU').read()):
                 if verbosity > 1:
                     sys.stderr.write("copying plural forms: %s\n" % m.group('value'))
                 lines = []

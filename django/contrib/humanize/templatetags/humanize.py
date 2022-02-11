@@ -30,10 +30,7 @@ def intcomma(value):
     """
     orig = force_unicode(value)
     new = re.sub("^(-?\d+)(\d{3})", '\g<1>,\g<2>', orig)
-    if orig == new:
-        return new
-    else:
-        return intcomma(new)
+    return new if orig == new else intcomma(new)
 intcomma.is_safe = True
 register.filter(intcomma)
 
@@ -85,11 +82,8 @@ def naturalday(value, arg=None):
     """
     try: 
         value = date(value.year, value.month, value.day)
-    except AttributeError:
+    except (AttributeError, ValueError):
         # Passed value wasn't a date object
-        return value
-    except ValueError:
-        # Date arguments out of range
         return value
     delta = value - date.today()
     if delta.days == 0:

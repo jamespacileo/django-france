@@ -137,10 +137,7 @@ class OGRGeometry(GDALBase):
     # Pickle routines
     def __getstate__(self):
         srs = self.srs
-        if srs:
-            srs = srs.wkt
-        else:
-            srs = None
+        srs = srs.wkt if srs else None
         return str(self.wkb), srs
 
     def __setstate__(self, state):
@@ -180,10 +177,7 @@ class OGRGeometry(GDALBase):
 
     def __eq__(self, other):
         "Is this Geometry equal to the other?"
-        if isinstance(other, OGRGeometry):
-            return self.equals(other)
-        else:
-            return False
+        return self.equals(other) if isinstance(other, OGRGeometry) else False
 
     def __ne__(self, other):
         "Tests for inequality."
@@ -201,19 +195,17 @@ class OGRGeometry(GDALBase):
 
     def _get_coord_dim(self):
         "Returns the coordinate dimension of the Geometry."
-        if isinstance(self, GeometryCollection) and GDAL_VERSION < (1, 5, 2):
-            # On GDAL versions prior to 1.5.2, there exists a bug in which
-            # the coordinate dimension of geometry collections is always 2:
-            #   http://trac.osgeo.org/gdal/ticket/2334
-            # Here we workaround by returning the coordinate dimension of the
-            # first geometry in the collection instead.
-            if len(self):
-                return capi.get_coord_dim(capi.get_geom_ref(self.ptr, 0))
+        if (
+            isinstance(self, GeometryCollection)
+            and GDAL_VERSION < (1, 5, 2)
+            and len(self)
+        ):
+            return capi.get_coord_dim(capi.get_geom_ref(self.ptr, 0))
         return capi.get_coord_dim(self.ptr)
 
     def _set_coord_dim(self, dim):
         "Sets the coordinate dimension of this Geometry."
-        if not dim in (2, 3):
+        if dim not in (2, 3):
             raise ValueError('Geometry dimension must be either 2 or 3')
         capi.set_coord_dim(self.ptr, dim)
 
@@ -295,9 +287,7 @@ class OGRGeometry(GDALBase):
 
     # The SRID property
     def _get_srid(self):
-        srs = self.srs
-        if srs: return srs.srid
-        return None
+        return srs.srid if (srs := self.srs) else None
 
     def _set_srid(self, srid):
         if isinstance(srid, (int, long)):
@@ -353,10 +343,7 @@ class OGRGeometry(GDALBase):
     @property
     def wkb(self):
         "Returns the WKB representation of the Geometry."
-        if sys.byteorder == 'little':
-            byteorder = 1 # wkbNDR (from ogr_core.h)
-        else:
-            byteorder = 0 # wkbXDR
+        byteorder = 1 if sys.byteorder == 'little' else 0
         sz = self.wkb_size
         # Creating the unsigned character buffer, and passing it in by reference.
         buf = (c_ubyte * sz)()
@@ -437,9 +424,8 @@ class OGRGeometry(GDALBase):
                     internal_ptr = capi.get_geom_ref(self.ptr, i)
                     if orig_dim != capi.get_coord_dim(internal_ptr):
                         capi.set_coord_dim(internal_ptr, orig_dim)
-            else:
-                if self.coord_dim != orig_dim:
-                    self.coord_dim = orig_dim
+            elif self.coord_dim != orig_dim:
+                self.coord_dim = orig_dim
 
     def transform_to(self, srs):
         "For backwards-compatibility."
@@ -569,18 +555,17 @@ class LineString(OGRGeometry):
 
     def __getitem__(self, index):
         "Returns the Point at the given index."
-        if index >= 0 and index < self.point_count:
-            x, y, z = c_double(), c_double(), c_double()
-            capi.get_point(self.ptr, index, byref(x), byref(y), byref(z))
-            dim = self.coord_dim
-            if dim == 1:
-                return (x.value,)
-            elif dim == 2:
-                return (x.value, y.value)
-            elif dim == 3:
-                return (x.value, y.value, z.value)
-        else:
+        if index < 0 or index >= self.point_count:
             raise OGRIndexError('index out of range: %s' % str(index))
+        x, y, z = c_double(), c_double(), c_double()
+        capi.get_point(self.ptr, index, byref(x), byref(y), byref(z))
+        dim = self.coord_dim
+        if dim == 1:
+            return (x.value,)
+        elif dim == 2:
+            return (x.value, y.value)
+        elif dim == 3:
+            return (x.value, y.value, z.value)
 
     def __iter__(self):
         "Iterates over each point in the LineString."
@@ -594,7 +579,7 @@ class LineString(OGRGeometry):
     @property
     def tuple(self):
         "Returns the tuple representation of this LineString."
-        return tuple([self[i] for i in xrange(len(self))])
+        return tuple(self[i] for i in xrange(len(self)))
     coords = tuple
 
     def _listarr(self, func):
@@ -651,14 +636,14 @@ class Polygon(OGRGeometry):
     @property
     def tuple(self):
         "Returns a tuple of LinearRing coordinate tuples."
-        return tuple([self[i].tuple for i in xrange(self.geom_count)])
+        return tuple(self[i].tuple for i in xrange(self.geom_count))
     coords = tuple
 
     @property
     def point_count(self):
         "The number of Points in this Polygon."
         # Summing up the number of points in each ring of the Polygon.
-        return sum([self[i].point_count for i in xrange(self.geom_count)])
+        return sum(self[i].point_count for i in xrange(self.geom_count))
 
     @property
     def centroid(self):
@@ -705,12 +690,12 @@ class GeometryCollection(OGRGeometry):
     def point_count(self):
         "The number of Points in this Geometry Collection."
         # Summing up the number of points in each geometry in this collection
-        return sum([self[i].point_count for i in xrange(self.geom_count)])
+        return sum(self[i].point_count for i in xrange(self.geom_count))
 
     @property
     def tuple(self):
         "Returns a tuple representation of this Geometry Collection."
-        return tuple([self[i].tuple for i in xrange(self.geom_count)])
+        return tuple(self[i].tuple for i in xrange(self.geom_count))
     coords = tuple
 
 # Multiple Geometry types.

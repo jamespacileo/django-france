@@ -105,9 +105,8 @@ class FormWizard(object):
 
             if not f.is_valid():
                 return self.render_revalidation_failure(request, i, f)
-            else:
-                self.process_step(request, f, i)
-                previous_form_list.append(f)
+            self.process_step(request, f, i)
+            previous_form_list.append(f)
 
         # Process the current step. If it's valid, go to the next step or call
         # done(), depending on whether any steps remain.
@@ -122,17 +121,15 @@ class FormWizard(object):
 
             if next_step == self.num_steps():
                 return self.done(request, previous_form_list + [form])
-            else:
-                form = self.get_form(next_step)
-                self.step = current_step = next_step
+            form = self.get_form(next_step)
+            self.step = current_step = next_step
 
         return self.render(form, request, current_step)
 
     def render(self, form, request, step, context=None):
         "Renders the given Form object, returning an HttpResponse."
-        old_data = request.POST
         prev_fields = []
-        if old_data:
+        if old_data := request.POST:
             hidden = forms.HiddenInput()
             # Collect all data from previous steps and render it as HTML hidden fields.
             for i in range(step):

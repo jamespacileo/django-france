@@ -57,7 +57,7 @@ class ITSocialSecurityNumberField(RegexField):
             check_digit = ssn_check_digit(value)
         except ValueError:
             raise ValidationError(self.error_messages['invalid'])
-        if not value[15] == check_digit:
+        if value[15] != check_digit:
             raise ValidationError(self.error_messages['invalid'])
         return value
 
@@ -78,7 +78,7 @@ class ITVatNumberField(Field):
         except ValueError:
             raise ValidationError(self.error_messages['invalid'])
         vat_number = str(vat_number).zfill(11)
-        check_digit = vat_number_check_digit(vat_number[0:10])
-        if not vat_number[10] == check_digit:
+        check_digit = vat_number_check_digit(vat_number[:10])
+        if vat_number[10] != check_digit:
             raise ValidationError(self.error_messages['invalid'])
         return smart_unicode(vat_number)

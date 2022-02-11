@@ -97,9 +97,7 @@ class AuthenticationForm(forms.Form):
                   "Cookies are required for logging in."))
 
     def get_user_id(self):
-        if self.user_cache:
-            return self.user_cache.id
-        return None
+        return self.user_cache.id if self.user_cache else None
 
     def get_user(self):
         return self.user_cache
@@ -161,9 +159,8 @@ class SetPasswordForm(forms.Form):
     def clean_new_password2(self):
         password1 = self.cleaned_data.get('new_password1')
         password2 = self.cleaned_data.get('new_password2')
-        if password1 and password2:
-            if password1 != password2:
-                raise forms.ValidationError(_("The two password fields didn't match."))
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError(_("The two password fields didn't match."))
         return password2
 
     def save(self, commit=True):
@@ -203,9 +200,8 @@ class AdminPasswordChangeForm(forms.Form):
     def clean_password2(self):
         password1 = self.cleaned_data.get('password1')
         password2 = self.cleaned_data.get('password2')
-        if password1 and password2:
-            if password1 != password2:
-                raise forms.ValidationError(_("The two password fields didn't match."))
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError(_("The two password fields didn't match."))
         return password2
 
     def save(self, commit=True):

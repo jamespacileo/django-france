@@ -9,11 +9,7 @@ from django.utils import importlib
 class BaseMemcachedCache(BaseCache):
     def __init__(self, server, params, library, value_not_found_exception):
         super(BaseMemcachedCache, self).__init__(params)
-        if isinstance(server, basestring):
-            self._servers = server.split(';')
-        else:
-            self._servers = server
-
+        self._servers = server.split(';') if isinstance(server, basestring) else server
         # The exception type to catch from the underlying library for a key
         # that was not found. This is a ValueError for python-memcache,
         # pylibmc.NotFound for pylibmc, and cmemcache will return None without
@@ -72,10 +68,8 @@ class BaseMemcachedCache(BaseCache):
         new_keys = map(lambda x: self.make_key(x, version=version), keys)
         ret = self._cache.get_multi(new_keys)
         if ret:
-            _ = {}
             m = dict(zip(new_keys, keys))
-            for k, v in ret.items():
-                _[m[k]] = v
+            _ = {m[k]: v for k, v in ret.items()}
             ret = _
         return ret
 

@@ -48,10 +48,7 @@ def int_from_geom(func, zero=False):
     "Argument is a geometry, return type is an integer."
     func.argtypes = [GEOM_PTR]
     func.restype = c_int
-    if zero:
-        func.errcheck = check_zero
-    else:
-        func.errcheck = check_minus_one
+    func.errcheck = check_zero if zero else check_minus_one
     return func
 
 def string_from_geom(func):

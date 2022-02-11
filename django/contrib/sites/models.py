@@ -88,8 +88,8 @@ def get_current_site(request):
     Checks if contrib.sites is installed and returns either the current
     ``Site`` object or a ``RequestSite`` object based on the request.
     """
-    if Site._meta.installed:
-        current_site = Site.objects.get_current()
-    else:
-        current_site = RequestSite(request)
-    return current_site
+    return (
+        Site.objects.get_current()
+        if Site._meta.installed
+        else RequestSite(request)
+    )

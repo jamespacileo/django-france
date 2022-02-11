@@ -49,10 +49,7 @@ class SessionStore(SessionBase):
         try:
             session_file = open(self._key_to_file(), "rb")
             try:
-                file_data = session_file.read()
-                # Don't fail if there is no data in the session file.
-                # We may have opened the empty placeholder file.
-                if file_data:
+                if file_data := session_file.read():
                     try:
                         session_data = self.decode(file_data)
                     except (EOFError, SuspiciousOperation):
@@ -131,9 +128,7 @@ class SessionStore(SessionBase):
             pass
 
     def exists(self, session_key):
-        if os.path.exists(self._key_to_file(session_key)):
-            return True
-        return False
+        return bool(os.path.exists(self._key_to_file(session_key)))
 
     def delete(self, session_key=None):
         if session_key is None:

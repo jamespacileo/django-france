@@ -95,8 +95,7 @@ class Polygon(GEOSGeometry):
         "Helper routine for trying to construct a ring from the given parameter."
         if isinstance(param, LinearRing): return param
         try:
-            ring = LinearRing(param)
-            return ring
+            return LinearRing(param)
         except TypeError:
             raise TypeError(msg)
 
@@ -155,7 +154,7 @@ class Polygon(GEOSGeometry):
     @property
     def tuple(self):
         "Gets the tuple for each ring in this Polygon."
-        return tuple([self[i].tuple for i in xrange(len(self))])
+        return tuple(self[i].tuple for i in xrange(len(self)))
     coords = tuple
 
     @property

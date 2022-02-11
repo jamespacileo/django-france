@@ -82,9 +82,8 @@ class CZBirthNumberField(Field):
                 raise ValidationError(self.error_messages['invalid_gender'])
 
             month = int(birth[2:4]) - female_const
-            if (not 1 <= month <= 12):
-                if (not 1 <= (month - 20) <= 12):
-                    raise ValidationError(self.error_messages['invalid'])
+            if (not 1 <= month <= 12) and (not 1 <= (month - 20) <= 12):
+                raise ValidationError(self.error_messages['invalid'])
 
         day = int(birth[4:6])
         if not (1 <= day <= 31):

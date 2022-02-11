@@ -51,15 +51,9 @@ def lorem(parser, token):
     if not common:
         bits.pop()
     # Method bit
-    if bits[-1] in ('w', 'p', 'b'):
-        method = bits.pop()
-    else:
-        method = 'b'
+    method = bits.pop() if bits[-1] in ('w', 'p', 'b') else 'b'
     # Count bit
-    if len(bits) > 1:
-        count = bits.pop()
-    else:
-        count = '1'
+    count = bits.pop() if len(bits) > 1 else '1'
     count = parser.compile_filter(count)
     if len(bits) != 1:
         raise template.TemplateSyntaxError("Incorrect format for %r tag" % tagname)

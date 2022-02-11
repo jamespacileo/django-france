@@ -17,7 +17,7 @@ def index(request, sitemaps):
     """
     current_site = get_current_site(request)
     sites = []
-    protocol = request.is_secure() and 'https' or 'http'
+    protocol = 'https' if request.is_secure() else 'http'
     for section, site in sitemaps.items():
         if callable(site):
             pages = site().paginator.num_pages
@@ -27,8 +27,12 @@ def index(request, sitemaps):
         sites.append('%s://%s%s' % (protocol, current_site.domain, sitemap_url))
 
         if pages > 1:
-            for page in range(2, pages+1):
-                sites.append('%s://%s%s?p=%s' % (protocol, current_site.domain, sitemap_url, page))
+            sites.extend(
+                '%s://%s%s?p=%s'
+                % (protocol, current_site.domain, sitemap_url, page)
+                for page in range(2, pages + 1)
+            )
+
     xml = loader.render_to_string('sitemap_index.xml', {'sitemaps': sites})
     return HttpResponse(xml, mimetype='application/xml')
 
@@ -98,10 +102,7 @@ def kml(request, label, model, field_name=None, compress=False, using=DEFAULT_DB
             placemarks.append(mod)
 
     # Getting the render function and rendering to the correct.
-    if compress:
-        render = render_to_kmz
-    else:
-        render = render_to_kml
+    render = render_to_kmz if compress else render_to_kml
     return render('gis/kml/placemarks.kml', {'places' : placemarks})
 
 def kmz(request, label, model, field_name=None, using=DEFAULT_DB_ALIAS):

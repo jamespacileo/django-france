@@ -42,8 +42,7 @@ class CAPhoneNumberField(Field):
         if value in EMPTY_VALUES:
             return u''
         value = re.sub('(\(|\)|\s+)', '', smart_unicode(value))
-        m = phone_digits_re.search(value)
-        if m:
+        if m := phone_digits_re.search(value):
             return u'%s-%s-%s' % (m.group(1), m.group(2), m.group(3))
         raise ValidationError(self.error_messages['invalid'])
 
@@ -121,14 +120,14 @@ class CASocialInsuranceNumberField(Field):
         num_digits = len(number)
         oddeven = num_digits & 1
 
-        for count in range(0, num_digits):
+        for count in range(num_digits):
             digit = int(number[count])
 
             if not (( count & 1 ) ^ oddeven ):
-                digit = digit * 2
+                digit *= 2
             if digit > 9:
-                digit = digit - 9
+                digit -= 9
 
-            sum = sum + digit
+            sum += digit
 
         return ( (sum % 10) == 0 )

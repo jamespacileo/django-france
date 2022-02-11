@@ -40,31 +40,28 @@ def pagination(cl):
     pagination_required = (not cl.show_all or not cl.can_show_all) and cl.multi_page
     if not pagination_required:
         page_range = []
+    elif paginator.num_pages <= 10:
+        page_range = range(paginator.num_pages)
     else:
+        # Insert "smart" pagination links, so that there are always ON_ENDS
+        # links at either end of the list of pages, and there are always
+        # ON_EACH_SIDE links at either end of the "current page" link.
+        page_range = []
         ON_EACH_SIDE = 3
         ON_ENDS = 2
 
-        # If there are 10 or fewer pages, display links to every page.
-        # Otherwise, do some fancy
-        if paginator.num_pages <= 10:
-            page_range = range(paginator.num_pages)
+        if page_num > (ON_EACH_SIDE + ON_ENDS):
+            page_range.extend(range(ON_EACH_SIDE - 1))
+            page_range.append(DOT)
+            page_range.extend(range(page_num - ON_EACH_SIDE, page_num + 1))
         else:
-            # Insert "smart" pagination links, so that there are always ON_ENDS
-            # links at either end of the list of pages, and there are always
-            # ON_EACH_SIDE links at either end of the "current page" link.
-            page_range = []
-            if page_num > (ON_EACH_SIDE + ON_ENDS):
-                page_range.extend(range(0, ON_EACH_SIDE - 1))
-                page_range.append(DOT)
-                page_range.extend(range(page_num - ON_EACH_SIDE, page_num + 1))
-            else:
-                page_range.extend(range(0, page_num + 1))
-            if page_num < (paginator.num_pages - ON_EACH_SIDE - ON_ENDS - 1):
-                page_range.extend(range(page_num + 1, page_num + ON_EACH_SIDE + 1))
-                page_range.append(DOT)
-                page_range.extend(range(paginator.num_pages - ON_ENDS, paginator.num_pages))
-            else:
-                page_range.extend(range(page_num + 1, paginator.num_pages))
+            page_range.extend(range(page_num + 1))
+        if page_num < (paginator.num_pages - ON_EACH_SIDE - ON_ENDS - 1):
+            page_range.extend(range(page_num + 1, page_num + ON_EACH_SIDE + 1))
+            page_range.append(DOT)
+            page_range.extend(range(paginator.num_pages - ON_ENDS, paginator.num_pages))
+        else:
+            page_range.extend(range(page_num + 1, paginator.num_pages))
 
     need_show_all_link = cl.can_show_all and not cl.show_all and cl.multi_page
     return {
@@ -142,18 +139,14 @@ def items_for_result(cl, result, form):
                 if field_name == u'action_checkbox':
                     row_class = ' class="action-checkbox"'
                 allow_tags = getattr(attr, 'allow_tags', False)
-                boolean = getattr(attr, 'boolean', False)
-                if boolean:
+                if boolean := getattr(attr, 'boolean', False):
                     allow_tags = True
                     result_repr = _boolean_icon(value)
                 else:
                     result_repr = smart_unicode(value)
                 # Strip HTML tags in the resulting text, except if the
                 # function has an "allow_tags" attribute set to True.
-                if not allow_tags:
-                    result_repr = escape(result_repr)
-                else:
-                    result_repr = mark_safe(result_repr)
+                result_repr = escape(result_repr) if not allow_tags else mark_safe(result_repr)
             else:
                 if isinstance(f.rel, models.ManyToOneRel):
                     field_val = getattr(result, f.name)
@@ -176,10 +169,7 @@ def items_for_result(cl, result, form):
             url = cl.url_for_result(result)
             # Convert the pk to something that can be used in Javascript.
             # Problem cases are long ints (23L) and non-ASCII strings.
-            if cl.to_field:
-                attr = str(cl.to_field)
-            else:
-                attr = pk
+            attr = str(cl.to_field) if cl.to_field else pk
             value = result.serializable_value(attr)
             result_id = repr(force_unicode(value))[1:]
             yield mark_safe(u'<%s%s><a href="%s"%s>%s</a></%s>' % \
@@ -236,73 +226,77 @@ def date_hierarchy(cl):
     """
     Displays the date hierarchy for date drill-down functionality.
     """
-    if cl.date_hierarchy:
-        field_name = cl.date_hierarchy
-        year_field = '%s__year' % field_name
-        month_field = '%s__month' % field_name
-        day_field = '%s__day' % field_name
-        field_generic = '%s__' % field_name
-        year_lookup = cl.params.get(year_field)
-        month_lookup = cl.params.get(month_field)
-        day_lookup = cl.params.get(day_field)
+    if not cl.date_hierarchy:
+        return
+    field_name = cl.date_hierarchy
+    year_field = '%s__year' % field_name
+    month_field = '%s__month' % field_name
+    day_field = '%s__day' % field_name
+    field_generic = '%s__' % field_name
+    year_lookup = cl.params.get(year_field)
+    month_lookup = cl.params.get(month_field)
+    day_lookup = cl.params.get(day_field)
 
-        link = lambda d: cl.get_query_string(d, [field_generic])
+    link = lambda d: cl.get_query_string(d, [field_generic])
 
-        if not (year_lookup or month_lookup or day_lookup):
-            # select appropriate start level
-            date_range = cl.query_set.aggregate(first=models.Min(field_name),
-                                                last=models.Max(field_name))
-            if date_range['first'] and date_range['last']:
-                if date_range['first'].year == date_range['last'].year:
-                    year_lookup = date_range['first'].year
-                    if date_range['first'].month == date_range['last'].month:
-                        month_lookup = date_range['first'].month
+    if not (year_lookup or month_lookup or day_lookup):
+        # select appropriate start level
+        date_range = cl.query_set.aggregate(first=models.Min(field_name),
+                                            last=models.Max(field_name))
+        if (
+            date_range['first']
+            and date_range['last']
+            and date_range['first'].year == date_range['last'].year
+        ):
+            year_lookup = date_range['first'].year
+            if date_range['first'].month == date_range['last'].month:
+                month_lookup = date_range['first'].month
 
-        if year_lookup and month_lookup and day_lookup:
-            day = datetime.date(int(year_lookup), int(month_lookup), int(day_lookup))
-            return {
-                'show': True,
-                'back': {
-                    'link': link({year_field: year_lookup, month_field: month_lookup}),
-                    'title': capfirst(formats.date_format(day, 'YEAR_MONTH_FORMAT'))
-                },
-                'choices': [{'title': capfirst(formats.date_format(day, 'MONTH_DAY_FORMAT'))}]
-            }
-        elif year_lookup and month_lookup:
-            days = cl.query_set.filter(**{year_field: year_lookup, month_field: month_lookup}).dates(field_name, 'day')
-            return {
-                'show': True,
-                'back': {
-                    'link': link({year_field: year_lookup}),
-                    'title': str(year_lookup)
-                },
-                'choices': [{
-                    'link': link({year_field: year_lookup, month_field: month_lookup, day_field: day.day}),
-                    'title': capfirst(formats.date_format(day, 'MONTH_DAY_FORMAT'))
-                } for day in days]
-            }
-        elif year_lookup:
-            months = cl.query_set.filter(**{year_field: year_lookup}).dates(field_name, 'month')
-            return {
-                'show' : True,
-                'back': {
-                    'link' : link({}),
-                    'title': _('All dates')
-                },
-                'choices': [{
-                    'link': link({year_field: year_lookup, month_field: month.month}),
-                    'title': capfirst(formats.date_format(month, 'YEAR_MONTH_FORMAT'))
-                } for month in months]
-            }
-        else:
-            years = cl.query_set.dates(field_name, 'year')
-            return {
-                'show': True,
-                'choices': [{
-                    'link': link({year_field: str(year.year)}),
-                    'title': str(year.year),
-                } for year in years]
-            }
+    if year_lookup and month_lookup and day_lookup:
+        day = datetime.date(int(year_lookup), int(month_lookup), int(day_lookup))
+        return {
+            'show': True,
+            'back': {
+                'link': link({year_field: year_lookup, month_field: month_lookup}),
+                'title': capfirst(formats.date_format(day, 'YEAR_MONTH_FORMAT'))
+            },
+            'choices': [{'title': capfirst(formats.date_format(day, 'MONTH_DAY_FORMAT'))}]
+        }
+    elif year_lookup and month_lookup:
+        days = cl.query_set.filter(**{year_field: year_lookup, month_field: month_lookup}).dates(field_name, 'day')
+        return {
+            'show': True,
+            'back': {
+                'link': link({year_field: year_lookup}),
+                'title': str(year_lookup)
+            },
+            'choices': [{
+                'link': link({year_field: year_lookup, month_field: month_lookup, day_field: day.day}),
+                'title': capfirst(formats.date_format(day, 'MONTH_DAY_FORMAT'))
+            } for day in days]
+        }
+    elif year_lookup:
+        months = cl.query_set.filter(**{year_field: year_lookup}).dates(field_name, 'month')
+        return {
+            'show' : True,
+            'back': {
+                'link' : link({}),
+                'title': _('All dates')
+            },
+            'choices': [{
+                'link': link({year_field: year_lookup, month_field: month.month}),
+                'title': capfirst(formats.date_format(month, 'YEAR_MONTH_FORMAT'))
+            } for month in months]
+        }
+    else:
+        years = cl.query_set.dates(field_name, 'year')
+        return {
+            'show': True,
+            'choices': [{
+                'link': link({year_field: str(year.year)}),
+                'title': str(year.year),
+            } for year in years]
+        }
 date_hierarchy = register.inclusion_tag('admin/date_hierarchy.html')(date_hierarchy)
 
 def search_form(cl):

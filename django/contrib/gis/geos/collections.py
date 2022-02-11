@@ -24,10 +24,7 @@ class GeometryCollection(GEOSGeometry):
         if len(args) == 1:
             # If only one geometry provided or a list of geometries is provided
             #  in the first argument.
-            if isinstance(args[0], (tuple, list)):
-                init_geoms = args[0]
-            else:
-                init_geoms = args
+            init_geoms = args[0] if isinstance(args[0], (tuple, list)) else args
         else:
             init_geoms = args
 
@@ -86,7 +83,7 @@ class GeometryCollection(GEOSGeometry):
     @property
     def tuple(self):
         "Returns a tuple of all the coordinates in this Geometry Collection"
-        return tuple([g.tuple for g in self])
+        return tuple(g.tuple for g in self)
     coords = tuple
 
 # MultiPoint, MultiLineString, and MultiPolygon class definitions.

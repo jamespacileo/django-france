@@ -47,14 +47,14 @@ class ISIdNumberField(RegexField):
         method is modulo 11.
         """
         check = [3, 2, 7, 6, 5, 4, 3, 2, 1, 0]
-        return sum([int(value[i]) * check[i] for i in range(10)]) % 11 == 0
+        return sum(int(value[i]) * check[i] for i in range(10)) % 11 == 0
 
     def _format(self, value):
         """
         Takes in the value in canonical form and returns it in the common
         display format.
         """
-        return smart_unicode(value[:6]+'-'+value[6:])
+        return smart_unicode(f'{value[:6]}-{value[6:]}')
 
 class ISPhoneNumberField(RegexField):
     """

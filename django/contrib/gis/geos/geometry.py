@@ -59,8 +59,7 @@ class GEOSGeometry(GEOSBase, ListMixin):
                 # Encoding to ASCII, WKT or HEXEWKB doesn't need any more.
                 geo_input = geo_input.encode('ascii')
 
-            wkt_m = wkt_regex.match(geo_input)
-            if wkt_m:
+            if wkt_m := wkt_regex.match(geo_input):
                 # Handling WKT input.
                 if wkt_m.group('srid'): srid = int(wkt_m.group('srid'))
                 g = wkt_r().read(wkt_m.group('wkt'))
@@ -194,10 +193,7 @@ class GEOSGeometry(GEOSBase, ListMixin):
     def has_cs(self):
         "Returns True if this Geometry has a coordinate sequence, False if not."
         # Only these geometries are allowed to have coordinate sequences.
-        if isinstance(self, (Point, LineString, LinearRing)):
-            return True
-        else:
-            return False
+        return isinstance(self, (Point, LineString, LinearRing))
 
     def _set_cs(self):
         "Sets the coordinate sequence for this Geometry."
@@ -357,8 +353,7 @@ class GEOSGeometry(GEOSBase, ListMixin):
     def get_srid(self):
         "Gets the SRID for the geometry, returns None if no SRID is set."
         s = capi.geos_get_srid(self.ptr)
-        if s == 0: return None
-        else: return s
+        return None if s == 0 else s
 
     def set_srid(self, srid):
         "Sets the SRID for the geometry."
@@ -373,8 +368,7 @@ class GEOSGeometry(GEOSBase, ListMixin):
         are *not* included in this representation because GEOS does not yet
         support serializing them.
         """
-        if self.get_srid(): return 'SRID=%s;%s' % (self.srid, self.wkt)
-        else: return self.wkt
+        return 'SRID=%s;%s' % (self.srid, self.wkt) if self.get_srid() else self.wkt
 
     @property
     def wkt(self):
@@ -400,13 +394,12 @@ class GEOSGeometry(GEOSBase, ListMixin):
         extension of the WKB specification that includes SRID and Z values
         that are a part of this geometry.
         """
-        if self.hasz:
-            if not GEOS_PREPARE:
-                # See: http://trac.osgeo.org/geos/ticket/216
-                raise GEOSException('Upgrade GEOS to 3.1 to get valid 3D HEXEWKB.')
-            return ewkb_w3d().write_hex(self)
-        else:
+        if not self.hasz:
             return ewkb_w().write_hex(self)
+        if not GEOS_PREPARE:
+            # See: http://trac.osgeo.org/geos/ticket/216
+            raise GEOSException('Upgrade GEOS to 3.1 to get valid 3D HEXEWKB.')
+        return ewkb_w3d().write_hex(self)
 
     @property
     def json(self):
@@ -436,13 +429,12 @@ class GEOSGeometry(GEOSBase, ListMixin):
         This is an extension of the WKB specification that includes any SRID
         and Z values that are a part of this geometry.
         """
-        if self.hasz:
-            if not GEOS_PREPARE:
-                # See: http://trac.osgeo.org/geos/ticket/216
-                raise GEOSException('Upgrade GEOS to 3.1 to get valid 3D EWKB.')
-            return ewkb_w3d().write(self)
-        else:
+        if not self.hasz:
             return ewkb_w().write(self)
+        if not GEOS_PREPARE:
+            # See: http://trac.osgeo.org/geos/ticket/216
+            raise GEOSException('Upgrade GEOS to 3.1 to get valid 3D EWKB.')
+        return ewkb_w3d().write(self)
 
     @property
     def kml(self):
@@ -465,22 +457,18 @@ class GEOSGeometry(GEOSBase, ListMixin):
     @property
     def ogr(self):
         "Returns the OGR Geometry for this Geometry."
-        if gdal.HAS_GDAL:
-            if self.srid:
-                return gdal.OGRGeometry(self.wkb, self.srid)
-            else:
-                return gdal.OGRGeometry(self.wkb)
-        else:
+        if not gdal.HAS_GDAL:
             raise GEOSException('GDAL required to convert to an OGRGeometry.')
+        if self.srid:
+            return gdal.OGRGeometry(self.wkb, self.srid)
+        else:
+            return gdal.OGRGeometry(self.wkb)
 
     @property
     def srs(self):
         "Returns the OSR SpatialReference for SRID of this Geometry."
         if gdal.HAS_GDAL:
-            if self.srid:
-                return gdal.SpatialReference(self.srid)
-            else:
-                return None
+            return gdal.SpatialReference(self.srid) if self.srid else None
         else:
             raise GEOSException('GDAL required to return a SpatialReference object.')
 

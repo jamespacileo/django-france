@@ -201,7 +201,7 @@ class LaxOptionParser(OptionParser):
         while rargs:
             arg = rargs[0]
             try:
-                if arg[0:2] == "--" and len(arg) > 2:
+                if arg[:2] == "--" and len(arg) > 2:
                     # process a single long option (possibly with value(s))
                     # the superclass code pops the arg off rargs
                     self._process_long_opt(rargs, values)
@@ -234,12 +234,17 @@ class ManagementUtility(object):
         """
         Returns the script's main help text, as a string.
         """
-        usage = ['',"Type '%s help <subcommand>' for help on a specific subcommand." % self.prog_name,'']
-        usage.append('Available subcommands:')
+        usage = [
+            '',
+            "Type '%s help <subcommand>' for help on a specific subcommand."
+            % self.prog_name,
+            '',
+            'Available subcommands:',
+        ]
+
         commands = get_commands().keys()
         commands.sort()
-        for cmd in commands:
-            usage.append('  %s' % cmd)
+        usage.extend('  %s' % cmd for cmd in commands)
         return '\n'.join(usage)
 
     def fetch_command(self, subcommand):
@@ -254,12 +259,11 @@ class ManagementUtility(object):
             sys.stderr.write("Unknown command: %r\nType '%s help' for usage.\n" % \
                 (subcommand, self.prog_name))
             sys.exit(1)
-        if isinstance(app_name, BaseCommand):
-            # If the command is already loaded, use it directly.
-            klass = app_name
-        else:
-            klass = load_command_class(app_name, subcommand)
-        return klass
+        return (
+            app_name
+            if isinstance(app_name, BaseCommand)
+            else load_command_class(app_name, subcommand)
+        )
 
     def autocomplete(self):
         """
@@ -408,10 +412,9 @@ def setup_environ(settings_mod, original_settings_path=None):
         settings_name = settings_name[:-3]
 
     # Set DJANGO_SETTINGS_MODULE appropriately.
-    if original_settings_path:
-        os.environ['DJANGO_SETTINGS_MODULE'] = original_settings_path
-    else:
-        os.environ['DJANGO_SETTINGS_MODULE'] = '%s.%s' % (project_name, settings_name)
+    os.environ[
+        'DJANGO_SETTINGS_MODULE'
+    ] = original_settings_path or '%s.%s' % (project_name, settings_name)
 
     # Import the project module. We add the parent directory to PYTHONPATH to
     # avoid some of the path errors new users can have.

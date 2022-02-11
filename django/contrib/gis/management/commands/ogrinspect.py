@@ -20,10 +20,7 @@ def list_option(option, opt, value, parser):
     a string list.  If the string is 'True'/'true' then the option 
     value will be a boolean instead.
     """
-    if value.lower() == 'true':
-        dest = True
-    else:
-        dest = [s for s in value.split(',')]
+    dest = True if value.lower() == 'true' else list(value.split(','))
     setattr(parser.values, option.dest, dest)
     
 class Command(ArgsCommand):

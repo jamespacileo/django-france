@@ -62,7 +62,7 @@ class BaseRunserverCommand(BaseCommand):
                 elif self.use_ipv6 and not _fqdn:
                     raise CommandError('"%s" is not a valid IPv6 address.' % self.addr)
         if not self.addr:
-            self.addr = self.use_ipv6 and '::1' or '127.0.0.1'
+            self.addr = '::1' if self.use_ipv6 else '127.0.0.1'
             self._raw_ipv6 = bool(self.use_ipv6)
         self.run(*args, **options)
 
@@ -70,9 +70,7 @@ class BaseRunserverCommand(BaseCommand):
         """
         Runs the server, using the autoreloader if needed
         """
-        use_reloader = options.get('use_reloader', True)
-
-        if use_reloader:
+        if use_reloader := options.get('use_reloader', True):
             autoreload.main(self.inner_run, args, options)
         else:
             self.inner_run(*args, **options)

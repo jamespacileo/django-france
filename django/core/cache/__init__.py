@@ -75,8 +75,7 @@ def parse_backend_uri(backend_uri):
     return scheme, host, params
 
 if not settings.CACHES:
-    legacy_backend = getattr(settings, 'CACHE_BACKEND', None)
-    if legacy_backend:
+    if legacy_backend := getattr(settings, 'CACHE_BACKEND', None):
         import warnings
         warnings.warn(
             "settings.CACHE_* is deprecated; use settings.CACHES instead.",

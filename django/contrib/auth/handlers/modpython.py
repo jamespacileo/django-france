@@ -21,8 +21,7 @@ def authenhandler(req, **kwargs):
     permission_name = options.get('DjangoPermissionName', None)
     staff_only = _str_to_bool(options.get('DjangoRequireStaffStatus', "on"))
     superuser_only = _str_to_bool(options.get('DjangoRequireSuperuserStatus', "off"))
-    settings_module = options.get('DJANGO_SETTINGS_MODULE', None)
-    if settings_module:
+    if settings_module := options.get('DJANGO_SETTINGS_MODULE', None):
         os.environ['DJANGO_SETTINGS_MODULE'] = settings_module
 
     from django.contrib.auth.models import User
@@ -40,16 +39,15 @@ def authenhandler(req, **kwargs):
             user = User.objects.get(**kwargs)
         except User.DoesNotExist:
             return apache.HTTP_UNAUTHORIZED
-    
-        # check the password and any permission given
-        if user.check_password(req.get_basic_auth_pw()):
-            if permission_name:
-                if user.has_perm(permission_name):
-                    return apache.OK
-                else:
-                    return apache.HTTP_UNAUTHORIZED
-            else:
-                return apache.OK
+
+        if not user.check_password(req.get_basic_auth_pw()):
+            return apache.HTTP_UNAUTHORIZED
+        if (
+            permission_name
+            and user.has_perm(permission_name)
+            or not permission_name
+        ):
+            return apache.OK
         else:
             return apache.HTTP_UNAUTHORIZED
     finally:

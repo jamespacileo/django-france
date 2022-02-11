@@ -37,10 +37,7 @@ class ResolverMatch(object):
         self.args = args
         self.kwargs = kwargs
         self.app_name = app_name
-        if namespaces:
-            self.namespaces = [x for x in namespaces if x]
-        else:
-            self.namespaces = []
+        self.namespaces = [x for x in namespaces if x] if namespaces else []
         if not url_name:
             if not hasattr(func, '__name__'):
                 # An instance of a callable class
@@ -139,19 +136,15 @@ class RegexURLPattern(object):
         """
         if not prefix or not hasattr(self, '_callback_str'):
             return
-        self._callback_str = prefix + '.' + self._callback_str
+        self._callback_str = f'{prefix}.{self._callback_str}'
 
     def resolve(self, path):
-        match = self.regex.search(path)
-        if match:
+        if match := self.regex.search(path):
             # If there are any named groups, use those as kwargs, ignoring
             # non-named groups. Otherwise, pass all non-named arguments as
             # positional arguments.
             kwargs = match.groupdict()
-            if kwargs:
-                args = ()
-            else:
-                args = match.groups()
+            args = () if kwargs else match.groups()
             # In both cases, pass any extra_kwargs as **kwargs.
             kwargs.update(self.default_args)
 
@@ -419,9 +412,8 @@ def set_urlconf(urlconf_name):
     """
     if urlconf_name:
         _urlconfs.value = urlconf_name
-    else:
-        if hasattr(_urlconfs, "value"):
-            del _urlconfs.value
+    elif hasattr(_urlconfs, "value"):
+        del _urlconfs.value
 
 def get_urlconf(default=None):
     """

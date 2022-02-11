@@ -147,18 +147,16 @@ class GeoQuerySet(QuerySet):
         if not isinstance(precision, (int, long)):
             raise TypeError('Precision keyword must be set with an integer.')
 
+        options = 0
         # Setting the options flag -- which depends on which version of
         # PostGIS we're using.
         if backend.spatial_version >= (1, 4, 0):
-            options = 0
             if crs and bbox: options = 3
             elif bbox: options = 1
             elif crs: options = 2
-        else:
-            options = 0
-            if crs and bbox: options = 3
-            elif crs: options = 1
-            elif bbox: options = 2
+        elif crs and bbox: options = 3
+        elif crs: options = 1
+        elif bbox: options = 2
         s = {'desc' : 'GeoJSON',
              'procedure_args' : {'precision' : precision, 'options' : options},
              'procedure_fmt' : '%(geo_col)s,%(precision)s,%(options)s',
@@ -453,7 +451,9 @@ class GeoQuerySet(QuerySet):
 
         # If the `geo_field_type` keyword was used, then enforce that
         # type limitation.
-        if not geo_field_type is None and not isinstance(geo_field, geo_field_type):
+        if geo_field_type is not None and not isinstance(
+            geo_field, geo_field_type
+        ):
             raise TypeError('"%s" stored procedures may only be called on %ss.' % (func, geo_field_type.__name__))
 
         # Setting the procedure args.
@@ -474,7 +474,9 @@ class GeoQuerySet(QuerySet):
 
         # Checking if there are any geo field type limitations on this
         # aggregate (e.g. ST_Makeline only operates on PointFields).
-        if not geo_field_type is None and not isinstance(geo_field, geo_field_type):
+        if geo_field_type is not None and not isinstance(
+            geo_field, geo_field_type
+        ):
             raise TypeError('%s aggregate may only be called on %ss.' % (aggregate.name, geo_field_type.__name__))
 
         # Getting the string expression of the field name, as this is the
@@ -592,7 +594,7 @@ class GeoQuerySet(QuerySet):
         distance = func == 'distance'
         length = func == 'length'
         perimeter = func == 'perimeter'
-        if not (distance or length or perimeter):
+        if not distance and not length and not perimeter:
             raise ValueError('Unknown distance function: %s' % func)
         geom_3d = geo_field.dim == 3
 
@@ -621,7 +623,7 @@ class GeoQuerySet(QuerySet):
         if backend.oracle:
             if distance:
                 procedure_fmt = '%(geo_col)s,%(geom)s,%(tolerance)s'
-            elif length or perimeter:
+            else:
                 procedure_fmt = '%(geo_col)s,%(tolerance)s'
             procedure_args['tolerance'] = tolerance
         else:
@@ -651,16 +653,11 @@ class GeoQuerySet(QuerySet):
                             procedure_fmt += ', %s(%%%%s, %s)' % (backend.from_text, self.query.transformed_srid)
                         else:
                             procedure_fmt += ', %%s'
+                    elif backend.spatialite:
+                        procedure_fmt += ', %s(%s(%%%%s, %s), %s)' % (backend.transform, backend.from_text,
+                                                                      geom.srid, self.query.transformed_srid)
                     else:
-                        # We need to transform the geom to the srid specified in `transform()`,
-                        # so wrapping the geometry placeholder in transformation SQL.
-                        # SpatiaLite also needs geometry placeholder wrapped in `GeomFromText`
-                        # constructor.
-                        if backend.spatialite:
-                            procedure_fmt += ', %s(%s(%%%%s, %s), %s)' % (backend.transform, backend.from_text,
-                                                                          geom.srid, self.query.transformed_srid)
-                        else:
-                            procedure_fmt += ', %s(%%%%s, %s)' % (backend.transform, self.query.transformed_srid)
+                        procedure_fmt += ', %s(%%%%s, %s)' % (backend.transform, self.query.transformed_srid)
                 else:
                     # `transform()` was not used on this GeoQuerySet.
                     procedure_fmt  = '%(geo_col)s,%(geom)s'
@@ -673,7 +670,10 @@ class GeoQuerySet(QuerySet):
                     if not backend.geography:
                         if not isinstance(geo_field, PointField):
                             raise ValueError('Spherical distance calculation only supported on PointFields.')
-                        if not str(Geometry(buffer(params[0].ewkb)).geom_type) == 'Point':
+                        if (
+                            str(Geometry(buffer(params[0].ewkb)).geom_type)
+                            != 'Point'
+                        ):
                             raise ValueError('Spherical distance calculation only supported with Point Geometry parameters')
                     # The `function` procedure argument needs to be set differently for
                     # geodetic distance calculations.
@@ -683,7 +683,7 @@ class GeoQuerySet(QuerySet):
                         procedure_args.update({'function' : backend.distance_spheroid, 'spheroid' : params[1]})
                     else:
                         procedure_args.update({'function' : backend.distance_sphere})
-            elif length or perimeter:
+            else:
                 procedure_fmt = '%(geo_col)s'
                 if not geography and geodetic and length:
                     # There's no `length_sphere`, and `length_spheroid` also
@@ -694,7 +694,7 @@ class GeoQuerySet(QuerySet):
                     # Use 3D variants of perimeter and length routines on PostGIS.
                     if perimeter:
                         procedure_args.update({'function' : backend.perimeter3d})
-                    elif length:
+                    else:
                         procedure_args.update({'function' : backend.length3d})
 
         # Setting up the settings for `_spatial_attribute`.
@@ -748,7 +748,7 @@ class GeoQuerySet(QuerySet):
         ForeignKey relation to the current model.
         """
         opts = self.model._meta
-        if not geo_field in opts.fields:
+        if geo_field not in opts.fields:
             # Is this operation going to be on a related geographic field?
             # If so, it'll have to be added to the select related information
             # (e.g., if 'location__point' was given as the field name).
@@ -757,7 +757,7 @@ class GeoQuerySet(QuerySet):
             compiler.pre_sql_setup()
             rel_table, rel_col = self.query.related_select_cols[self.query.related_select_fields.index(geo_field)]
             return compiler._field_column(geo_field, rel_table)
-        elif not geo_field in opts.local_fields:
+        elif geo_field not in opts.local_fields:
             # This geographic field is inherited from another model, so we have to
             # use the db table for the _parent_ model instead.
             tmp_fld, parent_model, direct, m2m = opts.get_field_by_name(geo_field.name)

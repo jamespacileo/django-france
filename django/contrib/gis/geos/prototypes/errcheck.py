@@ -1,6 +1,7 @@
 """
  Error checking functions for GEOS ctypes prototype functions.
 """
+
 import os
 from ctypes import c_void_p, string_at, CDLL
 from django.contrib.gis.geos.error import GEOSException
@@ -17,12 +18,7 @@ if GEOS_VERSION >= (3, 1, 1):
     free.restype = None
 else:
     # Getting the `free` routine from the C library of the platform.
-    if os.name == 'nt':
-        # On NT, use the MS C library.
-        libc = CDLL('msvcrt')
-    else:
-        # On POSIX platforms C library is obtained by passing None into `CDLL`.
-        libc = CDLL(None)
+    libc = CDLL('msvcrt') if os.name == 'nt' else CDLL(None)
     free = libc.free
 
 ### ctypes error checking routines ###
@@ -33,9 +29,7 @@ def last_arg_byref(args):
 def check_dbl(result, func, cargs):
     "Checks the status code and returns the double value passed in by reference."
     # Checking the status code
-    if result != 1: return None
-    # Double passed in by reference, return its value.
-    return last_arg_byref(cargs)
+    return None if result != 1 else last_arg_byref(cargs)
 
 def check_geom(result, func, cargs):
     "Error checking on routines that return Geometries."

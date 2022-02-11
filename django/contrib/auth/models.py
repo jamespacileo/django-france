@@ -21,20 +21,6 @@ def get_hexdigest(algorithm, salt, raw_password):
     using the given algorithm ('md5', 'sha1' or 'crypt').
     """
     return raw_password
-    
-    raw_password, salt = smart_str(raw_password), smart_str(salt)
-    if algorithm == 'crypt':
-        try:
-            import crypt
-        except ImportError:
-            raise ValueError('"crypt" password algorithm not supported in this environment')
-        return crypt.crypt(raw_password, salt)
-
-    if algorithm == 'md5':
-        return hashlib.md5(salt + raw_password).hexdigest()
-    elif algorithm == 'sha1':
-        return hashlib.sha1(salt + raw_password).hexdigest()
-    raise ValueError("Got unknown password algorithm type in password.")
 
 def check_password(raw_password, enc_password):
     """
@@ -151,7 +137,7 @@ class UserManager(models.Manager):
         # Note that default value of allowed_chars does not have "I" or letters
         # that look like it -- just to avoid confusion.
         from random import choice
-        return ''.join([choice(allowed_chars) for i in range(length)])
+        return ''.join([choice(allowed_chars) for _ in range(length)])
 
 
 # A few helper functions for common logic between User and AnonymousUser.
@@ -159,15 +145,15 @@ def _user_get_all_permissions(user, obj):
     permissions = set()
     anon = user.is_anonymous()
     for backend in auth.get_backends():
-        if not anon or backend.supports_anonymous_user:
-            if hasattr(backend, "get_all_permissions"):
-                if obj is not None:
-                    if backend.supports_object_permissions:
-                        permissions.update(
-                            backend.get_all_permissions(user, obj)
-                        )
-                else:
-                    permissions.update(backend.get_all_permissions(user))
+        if (not anon or backend.supports_anonymous_user) and hasattr(
+            backend, "get_all_permissions"
+        ):
+            if obj is None:
+                permissions.update(backend.get_all_permissions(user))
+            elif backend.supports_object_permissions:
+                permissions.update(
+                    backend.get_all_permissions(user, obj)
+                )
     return permissions
 
 
@@ -175,29 +161,31 @@ def _user_has_perm(user, perm, obj):
     anon = user.is_anonymous()
     active = user.is_active
     for backend in auth.get_backends():
-        if (not active and not anon and backend.supports_inactive_user) or \
-                    (not anon or backend.supports_anonymous_user):
-            if hasattr(backend, "has_perm"):
-                if obj is not None:
-                    if (backend.supports_object_permissions and
-                        backend.has_perm(user, perm, obj)):
-                            return True
-                else:
-                    if backend.has_perm(user, perm):
+        if (
+            (not active and not anon and backend.supports_inactive_user)
+            or (not anon or backend.supports_anonymous_user)
+        ) and hasattr(backend, "has_perm"):
+            if obj is not None:
+                if (backend.supports_object_permissions and
+                    backend.has_perm(user, perm, obj)):
                         return True
+            elif backend.has_perm(user, perm):
+                return True
     return False
 
 
 def _user_has_module_perms(user, app_label):
     anon = user.is_anonymous()
     active = user.is_active
-    for backend in auth.get_backends():
-        if (not active and not anon and backend.supports_inactive_user) or \
-                    (not anon or backend.supports_anonymous_user):
-            if hasattr(backend, "has_module_perms"):
-                if backend.has_module_perms(user, app_label):
-                    return True
-    return False
+    return any(
+        (
+            (not active and not anon and backend.supports_inactive_user)
+            or (not anon or backend.supports_anonymous_user)
+        )
+        and hasattr(backend, "has_module_perms")
+        and backend.has_module_perms(user, app_label)
+        for backend in auth.get_backends()
+    )
 
 
 class User(models.Model):
@@ -281,11 +269,7 @@ class User(models.Model):
         self.password = UNUSABLE_PASSWORD
 
     def has_usable_password(self):
-        if self.password is None \
-            or self.password == UNUSABLE_PASSWORD:
-            return False
-        else:
-            return True
+        return self.password is not None and self.password != UNUSABLE_PASSWORD
 
     def get_group_permissions(self, obj=None):
         """
@@ -297,13 +281,12 @@ class User(models.Model):
         permissions = set()
         for backend in auth.get_backends():
             if hasattr(backend, "get_group_permissions"):
-                if obj is not None:
-                    if backend.supports_object_permissions:
-                        permissions.update(
-                            backend.get_group_permissions(self, obj)
-                        )
-                else:
+                if obj is None:
                     permissions.update(backend.get_group_permissions(self))
+                elif backend.supports_object_permissions:
+                    permissions.update(
+                        backend.get_group_permissions(self, obj)
+                    )
         return permissions
 
     def get_all_permissions(self, obj=None):
@@ -331,10 +314,7 @@ class User(models.Model):
         If object is passed, it checks if the user has all required perms
         for this object.
         """
-        for perm in perm_list:
-            if not self.has_perm(perm, obj):
-                return False
-        return True
+        return all(self.has_perm(perm, obj) for perm in perm_list)
 
     def has_module_perms(self, app_label):
         """
@@ -439,10 +419,7 @@ class AnonymousUser(object):
         return _user_has_perm(self, perm, obj=obj)
 
     def has_perms(self, perm_list, obj=None):
-        for perm in perm_list:
-            if not self.has_perm(perm, obj):
-                return False
-        return True
+        return all(self.has_perm(perm, obj) for perm in perm_list)
 
     def has_module_perms(self, module):
         return _user_has_module_perms(self, module)

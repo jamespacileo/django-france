@@ -132,12 +132,10 @@ class GeoModelTest(TestCase):
         if oracle:
             # No precision parameter for Oracle :-/
             gml_regex = re.compile(r'^<gml:Point srsName="SDO:4326" xmlns:gml="http://www.opengis.net/gml"><gml:coordinates decimal="\." cs="," ts=" ">-104.60925\d+,38.25500\d+ </gml:coordinates></gml:Point>')
-            for ptown in [ptown1, ptown2]:
-                self.assertTrue(gml_regex.match(ptown.gml))
         else:
             gml_regex = re.compile(r'^<gml:Point srsName="EPSG:4326"><gml:coordinates>-104\.60925\d+,38\.255001</gml:coordinates></gml:Point>')
-            for ptown in [ptown1, ptown2]:
-                self.assertTrue(gml_regex.match(ptown.gml))
+        for ptown in [ptown1, ptown2]:
+            self.assertTrue(gml_regex.match(ptown.gml))
 
     def test03c_geojson(self):
         "Testing GeoJSON output from the database using GeoQuerySet.geojson()."
@@ -487,10 +485,7 @@ class GeoModelTest(TestCase):
         u1 = qs.unionagg(field_name='point')
         u2 = qs.order_by('name').unionagg()
         tol = 0.00001
-        if oracle:
-            union = union2
-        else:
-            union = union1
+        union = union2 if oracle else union1
         self.assertEqual(True, union.equals_exact(u1, tol))
         self.assertEqual(True, union.equals_exact(u2, tol))
         qs = City.objects.filter(name='NotACity')
@@ -550,11 +545,7 @@ class GeoModelTest(TestCase):
                    }
 
         for c in Country.objects.point_on_surface():
-            if spatialite:
-                # XXX This seems to be a WKT-translation-related precision issue?
-                tol = 0.00001
-            else:
-                tol = 0.000000001
+            tol = 0.00001 if spatialite else 0.000000001
             self.assertEqual(True, ref[c.name].equals_exact(c.point_on_surface, tol))
 
     @no_mysql
@@ -618,18 +609,9 @@ class GeoModelTest(TestCase):
 
         # XXX For some reason SpatiaLite does something screwey with the Texas geometry here.  Also,
         # XXX it doesn't like the null intersection.
-        if spatialite:
-            qs = qs.exclude(name='Texas')
-        else:
-            qs = qs.intersection(geom)
-
+        qs = qs.exclude(name='Texas') if spatialite else qs.intersection(geom)
         for c in qs:
-            if oracle:
-                # Should be able to execute the queries; however, they won't be the same
-                # as GEOS (because Oracle doesn't use GEOS internally like PostGIS or
-                # SpatiaLite).
-                pass
-            else:
+            if not oracle:
                 self.assertEqual(c.mpoly.difference(geom), c.difference)
                 if not spatialite:
                     self.assertEqual(c.mpoly.intersection(geom), c.intersection)

@@ -6,9 +6,6 @@ class Command(BaseCommand):
     help = "Ping Google with an updated sitemap, pass optional url of sitemap"
 
     def execute(self, *args, **options):
-        if len(args) == 1:
-            sitemap_url = args[0]
-        else:
-            sitemap_url = None
+        sitemap_url = args[0] if len(args) == 1 else None
         ping_google(sitemap_url=sitemap_url)
 

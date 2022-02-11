@@ -73,13 +73,7 @@ class SpatialReference(GDALBase):
         else:
             raise TypeError('Invalid SRS type "%s"' % srs_type)
 
-        if srs_type == 'ogr':
-            # Input is already an SRS pointer.
-            srs = srs_input
-        else:
-            # Creating a new SRS pointer, using the string buffer.
-            srs = capi.new_srs(buf)
-
+        srs = srs_input if srs_type == 'ogr' else capi.new_srs(buf)
         # If the pointer is NULL, throw an exception.
         if not srs:
             raise SRSException('Could not create spatial reference from: %s' % srs_input)
@@ -87,10 +81,10 @@ class SpatialReference(GDALBase):
             self.ptr = srs
 
         # Importing from either the user input string or an integer SRID.
-        if srs_type == 'user':
-            self.import_user_input(srs_input)
-        elif srs_type == 'epsg':
+        if srs_type == 'epsg':
             self.import_epsg(srs_input)
+        elif srs_type == 'user':
+            self.import_user_input(srs_input)
 
     def __del__(self):
         "Destroys this spatial reference."

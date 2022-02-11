@@ -37,9 +37,8 @@ class CHPhoneNumberField(Field):
         if value in EMPTY_VALUES:
             return u''
         value = re.sub('(\.|\s|/|-)', '', smart_unicode(value))
-        m = phone_digits_re.search(value)
-        if m:
-            return u'%s %s %s %s' % (value[0:3], value[3:6], value[6:8], value[8:10])
+        if m := phone_digits_re.search(value):
+            return u'%s %s %s %s' % (value[:3], value[3:6], value[6:8], value[8:10])
         raise ValidationError(self.error_messages['invalid'])
 
 class CHStateSelect(Select):
@@ -78,7 +77,7 @@ class CHIdentityCardNumberField(Field):
             if num < 0 or num > 8:
                 return False
             new_number = str(num) + new_number[1:]
-            new_number = new_number[:8] + '0'
+            new_number = f'{new_number[:8]}0'
 
         if not new_number.isdigit():
             return False
@@ -107,8 +106,7 @@ class CHIdentityCardNumberField(Field):
 
         idnumber, pos9, checksum = match.groupdict()['idnumber'], match.groupdict()['pos9'], match.groupdict()['checksum']
 
-        if idnumber == '00000000' or \
-           idnumber == 'A0000000':
+        if idnumber in ['00000000', 'A0000000']:
             raise ValidationError(self.error_messages['invalid'])
 
         all_digits = "%s%s%s" % (idnumber, pos9, checksum)

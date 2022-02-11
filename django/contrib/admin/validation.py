@@ -184,11 +184,15 @@ def validate_inline(cls, parent, parent_model):
                 "BaseModelFormSet." % cls.__name__)
 
     # exclude
-    if hasattr(cls, 'exclude') and cls.exclude:
-        if fk and fk.name in cls.exclude:
-            raise ImproperlyConfigured("%s cannot exclude the field "
-                    "'%s' - this is the foreign key to the parent model "
-                    "%s." % (cls.__name__, fk.name, parent_model.__name__))
+    if (
+        hasattr(cls, 'exclude')
+        and cls.exclude
+        and fk
+        and fk.name in cls.exclude
+    ):
+        raise ImproperlyConfigured("%s cannot exclude the field "
+                "'%s' - this is the foreign key to the parent model "
+                "%s." % (cls.__name__, fk.name, parent_model.__name__))
 
     if hasattr(cls, "readonly_fields"):
         check_readonly_fields(cls, cls.model, cls.model._meta)
@@ -318,7 +322,7 @@ def validate_base(cls, model):
                 raise ImproperlyConfigured("'%s.radio_fields['%s']' "
                         "is neither an instance of ForeignKey nor does "
                         "have choices set." % (cls.__name__, field))
-            if not val in (HORIZONTAL, VERTICAL):
+            if val not in (HORIZONTAL, VERTICAL):
                 raise ImproperlyConfigured("'%s.radio_fields['%s']' "
                         "is neither admin.HORIZONTAL nor admin.VERTICAL."
                         % (cls.__name__, field))
@@ -382,11 +386,13 @@ def fetch_attr(cls, model, opts, label, field):
 def check_readonly_fields(cls, model, opts):
     check_isseq(cls, "readonly_fields", cls.readonly_fields)
     for idx, field in enumerate(cls.readonly_fields):
-        if not callable(field):
-            if not hasattr(cls, field):
-                if not hasattr(model, field):
-                    try:
-                        opts.get_field(field)
-                    except models.FieldDoesNotExist:
-                        raise ImproperlyConfigured("%s.readonly_fields[%d], %r is not a callable or an attribute of %r or found in the model %r."
-                            % (cls.__name__, idx, field, cls.__name__, model._meta.object_name))
+        if (
+            not callable(field)
+            and not hasattr(cls, field)
+            and not hasattr(model, field)
+        ):
+            try:
+                opts.get_field(field)
+            except models.FieldDoesNotExist:
+                raise ImproperlyConfigured("%s.readonly_fields[%d], %r is not a callable or an attribute of %r or found in the model %r."
+                    % (cls.__name__, idx, field, cls.__name__, model._meta.object_name))

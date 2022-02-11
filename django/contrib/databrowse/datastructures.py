@@ -94,7 +94,7 @@ class EasyInstance(object):
     def __unicode__(self):
         val = smart_unicode(self.instance)
         if len(val) > DISPLAY_SIZE:
-            return val[:DISPLAY_SIZE] + u'...'
+            return f'{val[:DISPLAY_SIZE]}...'
         return val
 
     def __str__(self):
@@ -153,7 +153,7 @@ class EasyInstanceField(object):
                 return list(getattr(self.instance.instance, self.field.name).all())
         elif self.field.choices:
             objs = dict(self.field.choices).get(self.raw_value, EMPTY_VALUE)
-        elif isinstance(self.field, models.DateField) or isinstance(self.field, models.TimeField):
+        elif isinstance(self.field, (models.DateField, models.TimeField)):
             if self.raw_value:
                 if isinstance(self.field, models.DateTimeField):
                     objs = capfirst(formats.date_format(self.raw_value, 'DATETIME_FORMAT'))
@@ -163,7 +163,7 @@ class EasyInstanceField(object):
                     objs = capfirst(formats.date_format(self.raw_value, 'DATE_FORMAT'))
             else:
                 objs = EMPTY_VALUE
-        elif isinstance(self.field, models.BooleanField) or isinstance(self.field, models.NullBooleanField):
+        elif isinstance(self.field, (models.BooleanField, models.NullBooleanField)):
             objs = {True: 'Yes', False: 'No', None: 'Unknown'}[self.raw_value]
         else:
             objs = self.raw_value

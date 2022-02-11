@@ -31,8 +31,7 @@ class BRPhoneNumberField(Field):
         if value in EMPTY_VALUES:
             return u''
         value = re.sub('(\(|\)|\s+)', '', smart_unicode(value))
-        m = phone_digits_re.search(value)
-        if m:
+        if m := phone_digits_re.search(value):
             return u'%s-%s-%s' % (m.group(1), m.group(2), m.group(3))
         raise ValidationError(self.error_messages['invalid'])
 
@@ -68,15 +67,13 @@ class BRStateChoiceField(Field):
         value = smart_unicode(value)
         if value == u'':
             return value
-        valid_values = set([smart_unicode(k) for k, v in self.widget.choices])
+        valid_values = {smart_unicode(k) for k, v in self.widget.choices}
         if value not in valid_values:
             raise ValidationError(self.error_messages['invalid'])
         return value
 
 def DV_maker(v):
-    if v >= 2:
-        return 11 - v
-    return 0
+    return 11 - v if v >= 2 else 0
 
 class BRCPFField(CharField):
     """
@@ -114,10 +111,10 @@ class BRCPFField(CharField):
             raise ValidationError(self.error_messages['max_digits'])
         orig_dv = value[-2:]
 
-        new_1dv = sum([i * int(value[idx]) for idx, i in enumerate(range(10, 1, -1))])
+        new_1dv = sum(i * int(value[idx]) for idx, i in enumerate(range(10, 1, -1)))
         new_1dv = DV_maker(new_1dv % 11)
         value = value[:-2] + str(new_1dv) + value[-1]
-        new_2dv = sum([i * int(value[idx]) for idx, i in enumerate(range(11, 1, -1))])
+        new_2dv = sum(i * int(value[idx]) for idx, i in enumerate(range(11, 1, -1)))
         new_2dv = DV_maker(new_2dv % 11)
         value = value[:-1] + str(new_2dv)
         if value[-2:] != orig_dv:
@@ -151,10 +148,18 @@ class BRCNPJField(Field):
             raise ValidationError(self.error_messages['max_digits'])
         orig_dv = value[-2:]
 
-        new_1dv = sum([i * int(value[idx]) for idx, i in enumerate(range(5, 1, -1) + range(9, 1, -1))])
+        new_1dv = sum(
+            i * int(value[idx])
+            for idx, i in enumerate(range(5, 1, -1) + range(9, 1, -1))
+        )
+
         new_1dv = DV_maker(new_1dv % 11)
         value = value[:-2] + str(new_1dv) + value[-1]
-        new_2dv = sum([i * int(value[idx]) for idx, i in enumerate(range(6, 1, -1) + range(9, 1, -1))])
+        new_2dv = sum(
+            i * int(value[idx])
+            for idx, i in enumerate(range(6, 1, -1) + range(9, 1, -1))
+        )
+
         new_2dv = DV_maker(new_2dv % 11)
         value = value[:-1] + str(new_2dv)
         if value[-2:] != orig_dv:

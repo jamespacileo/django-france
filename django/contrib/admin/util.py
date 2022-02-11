@@ -46,7 +46,7 @@ def unquote(s):
             except ValueError:
                 myappend('_' + item)
         else:
-            myappend('_' + item)
+            myappend(f'_{item}')
     return "".join(res)
 
 
@@ -80,26 +80,25 @@ def get_deleted_objects(objs, opts, user, admin_site, using):
         has_admin = obj.__class__ in admin_site._registry
         opts = obj._meta
 
-        if has_admin:
-            admin_url = reverse('%s:%s_%s_change'
-                                % (admin_site.name,
-                                   opts.app_label,
-                                   opts.object_name.lower()),
-                                None, (quote(obj._get_pk_val()),))
-            p = '%s.%s' % (opts.app_label,
-                           opts.get_delete_permission())
-            if not user.has_perm(p):
-                perms_needed.add(opts.verbose_name)
-            # Display a link to the admin page.
-            return mark_safe(u'%s: <a href="%s">%s</a>' %
-                             (escape(capfirst(opts.verbose_name)),
-                              admin_url,
-                              escape(obj)))
-        else:
+        if not has_admin:
             # Don't display link to edit, because it either has no
             # admin or is edited inline.
             return u'%s: %s' % (capfirst(opts.verbose_name),
                                 force_unicode(obj))
+        admin_url = reverse('%s:%s_%s_change'
+                            % (admin_site.name,
+                               opts.app_label,
+                               opts.object_name.lower()),
+                            None, (quote(obj._get_pk_val()),))
+        p = '%s.%s' % (opts.app_label,
+                       opts.get_delete_permission())
+        if not user.has_perm(p):
+            perms_needed.add(opts.verbose_name)
+        # Display a link to the admin page.
+        return mark_safe(u'%s: <a href="%s">%s</a>' %
+                         (escape(capfirst(opts.verbose_name)),
+                          admin_url,
+                          escape(obj)))
 
     to_delete = collector.nested(format_callback)
 
@@ -139,10 +138,7 @@ class NestedObjects(Collector):
         children = []
         for child in self.edges.get(obj, ()):
             children.extend(self._nested(child, seen, format_callback))
-        if format_callback:
-            ret = [format_callback(obj)]
-        else:
-            ret = [obj]
+        ret = [format_callback(obj)] if format_callback else [obj]
         if children:
             ret.append(children)
         return ret
@@ -208,16 +204,17 @@ def lookup_field(name, obj, model_admin=None):
         if callable(name):
             attr = name
             value = attr(obj)
-        elif (model_admin is not None and hasattr(model_admin, name) and
-          not name == '__str__' and not name == '__unicode__'):
+        elif (
+            model_admin is not None
+            and hasattr(model_admin, name)
+            and name != '__str__'
+            and name != '__unicode__'
+        ):
             attr = getattr(model_admin, name)
             value = attr(obj)
         else:
             attr = getattr(obj, name)
-            if callable(attr):
-                value = attr()
-            else:
-                value = attr
+            value = attr() if callable(attr) else attr
         f = None
     else:
         attr = None
@@ -254,16 +251,10 @@ def label_for_field(name, model, model_admin=None, return_attr=False):
             if hasattr(attr, "short_description"):
                 label = attr.short_description
             elif callable(attr):
-                if attr.__name__ == "<lambda>":
-                    label = "--"
-                else:
-                    label = pretty_name(attr.__name__)
+                label = "--" if attr.__name__ == "<lambda>" else pretty_name(attr.__name__)
             else:
                 label = pretty_name(name)
-    if return_attr:
-        return (label, attr)
-    else:
-        return label
+    return (label, attr) if return_attr else label
 
 def help_text_for_field(name, model):
     try:
@@ -279,13 +270,11 @@ def display_for_field(value, field):
 
     if field.flatchoices:
         return dict(field.flatchoices).get(value, EMPTY_CHANGELIST_VALUE)
-    # NullBooleanField needs special-case null-handling, so it comes
-    # before the general null test.
-    elif isinstance(field, models.BooleanField) or isinstance(field, models.NullBooleanField):
+    elif isinstance(field, (models.BooleanField, models.NullBooleanField)):
         return _boolean_icon(value)
     elif value is None:
         return EMPTY_CHANGELIST_VALUE
-    elif isinstance(field, models.DateField) or isinstance(field, models.TimeField):
+    elif isinstance(field, (models.DateField, models.TimeField)):
         return formats.localize(value)
     elif isinstance(field, models.DecimalField):
         return formats.number_format(value, field.decimal_places)
@@ -350,10 +339,7 @@ def get_fields_from_path(model, path):
     pieces = path.split(LOOKUP_SEP)
     fields = []
     for piece in pieces:
-        if fields:
-            parent = get_model_from_relation(fields[-1])
-        else:
-            parent = model
+        parent = get_model_from_relation(fields[-1]) if fields else model
         fields.append(parent._meta.get_field_by_name(piece)[0])
     return fields
 

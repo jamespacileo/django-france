@@ -186,10 +186,10 @@ class SpatialRefSysMixin(object):
         """
         if gdal.HAS_GDAL:
             return self.srs.ellipsoid
-        else:
-            m = self.spheroid_regex.match(self.wkt)
+        if m := self.spheroid_regex.match(self.wkt):
             if m: return (float(m.group('major')), float(m.group('flattening')))
-            else: return None
+        else:
+            return None
 
     @property
     def name(self):
@@ -209,18 +209,12 @@ class SpatialRefSysMixin(object):
     @property
     def projected(self):
         "Is this Spatial Reference projected?"
-        if gdal.HAS_GDAL:
-            return self.srs.projected
-        else:
-            return self.wkt.startswith('PROJCS')
+        return self.srs.projected if gdal.HAS_GDAL else self.wkt.startswith('PROJCS')
 
     @property
     def local(self):
         "Is this Spatial Reference local?"
-        if gdal.HAS_GDAL:
-            return self.srs.local
-        else:
-            return self.wkt.startswith('LOCAL_CS')
+        return self.srs.local if gdal.HAS_GDAL else self.wkt.startswith('LOCAL_CS')
 
     @property
     def geographic(self):
@@ -293,9 +287,8 @@ class SpatialRefSysMixin(object):
         """
         if gdal.HAS_GDAL:
             return gdal.SpatialReference(wkt).units
-        else:
-            m = cls.units_regex.match(wkt)
-            return m.group('unit'), m.group('unit_name')
+        m = cls.units_regex.match(wkt)
+        return m.group('unit'), m.group('unit_name')
 
     @classmethod
     def get_spheroid(cls, wkt, string=True):
@@ -307,23 +300,20 @@ class SpatialRefSysMixin(object):
             srs = gdal.SpatialReference(wkt)
             sphere_params = srs.ellipsoid
             sphere_name = srs['spheroid']
+        elif m := cls.spheroid_regex.match(wkt):
+            sphere_params = (float(m.group('major')), float(m.group('flattening')))
+            sphere_name = m.group('name')
         else:
-            m = cls.spheroid_regex.match(wkt)
-            if m:
-                sphere_params = (float(m.group('major')), float(m.group('flattening')))
-                sphere_name = m.group('name')
-            else:
-                return None
+            return None
 
         if not string:
             return sphere_name, sphere_params
+        # `string` parameter used to place in format acceptable by PostGIS
+        if len(sphere_params) == 3:
+            radius, flattening = sphere_params[0], sphere_params[2]
         else:
-            # `string` parameter used to place in format acceptable by PostGIS
-            if len(sphere_params) == 3:
-                radius, flattening = sphere_params[0], sphere_params[2]
-            else:
-                radius, flattening = sphere_params
-            return 'SPHEROID["%s",%s,%s]' % (sphere_name, radius, flattening)
+            radius, flattening = sphere_params
+        return 'SPHEROID["%s",%s,%s]' % (sphere_name, radius, flattening)
 
     def __unicode__(self):
         """

@@ -8,7 +8,7 @@ from django.core.paginator import EmptyPage, PageNotAnInteger
 def index(request, sitemaps, template_name='sitemap_index.xml'):
     current_site = get_current_site(request)
     sites = []
-    protocol = request.is_secure() and 'https' or 'http'
+    protocol = 'https' if request.is_secure() else 'http'
     for section, site in sitemaps.items():
         site.request = request
         if callable(site):
@@ -18,8 +18,12 @@ def index(request, sitemaps, template_name='sitemap_index.xml'):
         sitemap_url = urlresolvers.reverse('django.contrib.sitemaps.views.sitemap', kwargs={'section': section})
         sites.append('%s://%s%s' % (protocol, current_site.domain, sitemap_url))
         if pages > 1:
-            for page in range(2, pages+1):
-                sites.append('%s://%s%s?p=%s' % (protocol, current_site.domain, sitemap_url, page))
+            sites.extend(
+                '%s://%s%s?p=%s'
+                % (protocol, current_site.domain, sitemap_url, page)
+                for page in range(2, pages + 1)
+            )
+
     xml = loader.render_to_string(template_name, {'sitemaps': sites})
     return HttpResponse(xml, mimetype='application/xml')
 

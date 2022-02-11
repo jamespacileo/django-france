@@ -70,10 +70,9 @@ class SessionBase(object):
     def setdefault(self, key, value):
         if key in self._session:
             return self._session[key]
-        else:
-            self.modified = True
-            self._session[key] = value
-            return value
+        self.modified = True
+        self._session[key] = value
+        return value
 
     def set_test_cookie(self):
         self[self.TEST_COOKIE_NAME] = self.TEST_COOKIE_VALUE
@@ -85,14 +84,14 @@ class SessionBase(object):
         del self[self.TEST_COOKIE_NAME]
 
     def _hash(self, value):
-        key_salt = "django.contrib.sessions" + self.__class__.__name__
+        key_salt = f'django.contrib.sessions{self.__class__.__name__}'
         return salted_hmac(key_salt, value).hexdigest()
 
     def encode(self, session_dict):
         "Returns the given session dictionary pickled and encoded as a string."
         pickled = pickle.dumps(session_dict, pickle.HIGHEST_PROTOCOL)
         hash = self._hash(pickled)
-        return base64.encodestring(hash + ":" + pickled)
+        return base64.encodestring(f'{hash}:{pickled}')
 
     def decode(self, session_data):
         encoded_data = base64.decodestring(session_data)
@@ -154,11 +153,9 @@ class SessionBase(object):
         return session_key
 
     def _get_session_key(self):
-        if self._session_key:
-            return self._session_key
-        else:
+        if not self._session_key:
             self._session_key = self._get_new_session_key()
-            return self._session_key
+        return self._session_key
 
     def _set_session_key(self, session_key):
         self._session_key = session_key

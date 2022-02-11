@@ -43,10 +43,7 @@ class AdminSite(object):
     def __init__(self, name=None, app_name='admin'):
         self._registry = {} # model_class class -> admin_class instance
         self.root_path = None
-        if name is None:
-            self.name = 'admin'
-        else:
-            self.name = name
+        self.name = 'admin' if name is None else name
         self.app_name = app_name
         self._actions = {'delete_selected': actions.delete_selected}
         self._global_actions = self._actions.copy()
@@ -163,8 +160,12 @@ class AdminSite(object):
         if not ContentType._meta.installed:
             raise ImproperlyConfigured("Put 'django.contrib.contenttypes' in "
                 "your INSTALLED_APPS setting in order to use the admin application.")
-        if not ('django.contrib.auth.context_processors.auth' in settings.TEMPLATE_CONTEXT_PROCESSORS or
-            'django.core.context_processors.auth' in settings.TEMPLATE_CONTEXT_PROCESSORS):
+        if (
+            'django.contrib.auth.context_processors.auth'
+            not in settings.TEMPLATE_CONTEXT_PROCESSORS
+            and 'django.core.context_processors.auth'
+            not in settings.TEMPLATE_CONTEXT_PROCESSORS
+        ):
             raise ImproperlyConfigured("Put 'django.contrib.auth.context_processors.auth' "
                 "in your TEMPLATE_CONTEXT_PROCESSORS setting in order to use the admin application.")
 
@@ -340,9 +341,7 @@ class AdminSite(object):
         user = request.user
         for model, model_admin in self._registry.items():
             app_label = model._meta.app_label
-            has_module_perms = user.has_module_perms(app_label)
-
-            if has_module_perms:
+            if has_module_perms := user.has_module_perms(app_label):
                 perms = model_admin.get_model_perms(request)
 
                 # Check whether user has any perm for this module.
@@ -358,10 +357,11 @@ class AdminSite(object):
                     else:
                         app_dict[app_label] = {
                             'name': app_label.title(),
-                            'app_url': app_label + '/',
+                            'app_url': f'{app_label}/',
                             'has_module_perms': has_module_perms,
                             'models': [model_dict],
                         }
+
 
         # Sort the apps alphabetically.
         app_list = app_dict.values()
@@ -387,30 +387,29 @@ class AdminSite(object):
         has_module_perms = user.has_module_perms(app_label)
         app_dict = {}
         for model, model_admin in self._registry.items():
-            if app_label == model._meta.app_label:
-                if has_module_perms:
-                    perms = model_admin.get_model_perms(request)
+            if app_label == model._meta.app_label and has_module_perms:
+                perms = model_admin.get_model_perms(request)
 
-                    # Check whether user has any perm for this module.
-                    # If so, add the module to the model_list.
-                    if True in perms.values():
-                        model_dict = {
-                            'name': capfirst(model._meta.verbose_name_plural),
-                            'admin_url': '%s/' % model.__name__.lower(),
-                            'perms': perms,
+                # Check whether user has any perm for this module.
+                # If so, add the module to the model_list.
+                if True in perms.values():
+                    model_dict = {
+                        'name': capfirst(model._meta.verbose_name_plural),
+                        'admin_url': '%s/' % model.__name__.lower(),
+                        'perms': perms,
+                    }
+                    if app_dict:
+                        app_dict['models'].append(model_dict),
+                    else:
+                        # First time around, now that we know there's
+                        # something to display, add in the necessary meta
+                        # information.
+                        app_dict = {
+                            'name': app_label.title(),
+                            'app_url': '',
+                            'has_module_perms': has_module_perms,
+                            'models': [model_dict],
                         }
-                        if app_dict:
-                            app_dict['models'].append(model_dict),
-                        else:
-                            # First time around, now that we know there's
-                            # something to display, add in the necessary meta
-                            # information.
-                            app_dict = {
-                                'name': app_label.title(),
-                                'app_url': '',
-                                'has_module_perms': has_module_perms,
-                                'models': [model_dict],
-                            }
         if not app_dict:
             raise http.Http404('The requested admin page does not exist.')
         # Sort the models alphabetically within each app.

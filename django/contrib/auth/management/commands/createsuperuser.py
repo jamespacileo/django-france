@@ -86,7 +86,7 @@ class Command(BaseCommand):
                         input_msg = 'Username'
                         if default_username:
                             input_msg += ' (Leave blank to use %r)' % default_username
-                        username = raw_input(input_msg + ': ')
+                        username = raw_input(f'{input_msg}: ')
                     if default_username and username == '':
                         username = default_username
                     if not RE_VALID_USERNAME.match(username):

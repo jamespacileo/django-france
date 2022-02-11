@@ -73,8 +73,7 @@ class GenericForeignKey(object):
             # the naive ``getattr(instance, self.ct_field)``, but has better
             # performance when dealing with GFKs in loops and such.
             f = self.model._meta.get_field(self.ct_field)
-            ct_id = getattr(instance, f.get_attname(), None)
-            if ct_id:
+            if ct_id := getattr(instance, f.get_attname(), None):
                 ct = self.get_content_type(id=ct_id, using=instance._state.db)
                 try:
                     rel_obj = ct.get_object_for_this_type(pk=getattr(instance, self.fk_field))
@@ -215,19 +214,21 @@ class ReverseGenericRelatedObjectsDescriptor(object):
 
         qn = connection.ops.quote_name
 
-        manager = RelatedManager(
-            model = rel_model,
-            instance = instance,
-            symmetrical = (self.field.rel.symmetrical and instance.__class__ == rel_model),
-            join_table = qn(self.field.m2m_db_table()),
-            source_col_name = qn(self.field.m2m_column_name()),
-            target_col_name = qn(self.field.m2m_reverse_name()),
-            content_type = ContentType.objects.db_manager(instance._state.db).get_for_model(instance),
-            content_type_field_name = self.field.content_type_field_name,
-            object_id_field_name = self.field.object_id_field_name
+        return RelatedManager(
+            model=rel_model,
+            instance=instance,
+            symmetrical=(
+                self.field.rel.symmetrical and instance.__class__ == rel_model
+            ),
+            join_table=qn(self.field.m2m_db_table()),
+            source_col_name=qn(self.field.m2m_column_name()),
+            target_col_name=qn(self.field.m2m_reverse_name()),
+            content_type=ContentType.objects.db_manager(
+                instance._state.db
+            ).get_for_model(instance),
+            content_type_field_name=self.field.content_type_field_name,
+            object_id_field_name=self.field.object_id_field_name,
         )
-
-        return manager
 
     def __set__(self, instance, value):
         if instance is None:
@@ -402,10 +403,7 @@ class GenericInlineModelAdmin(InlineModelAdmin):
             fields = flatten_fieldsets(self.declared_fieldsets)
         else:
             fields = None
-        if self.exclude is None:
-            exclude = []
-        else:
-            exclude = list(self.exclude)
+        exclude = [] if self.exclude is None else list(self.exclude)
         exclude.extend(self.get_readonly_fields(request, obj))
         exclude = exclude or None
         defaults = {

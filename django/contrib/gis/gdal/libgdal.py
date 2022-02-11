@@ -26,8 +26,8 @@ else:
 if lib_names:
     for lib_name in lib_names:
         lib_path = find_library(lib_name)
-        if not lib_path is None: break
-        
+        if lib_path is not None: break
+
 if lib_path is None:
     raise OGRException('Could not find the GDAL library (tried "%s"). '
                        'Try setting GDAL_LIBRARY_PATH in your settings.' % 
@@ -49,10 +49,7 @@ def std_call(func):
     Returns the correct STDCALL function for certain OSR routines on Win32
     platforms.
     """
-    if os.name == 'nt':
-        return lwingdal[func]
-    else:
-        return lgdal[func]
+    return lwingdal[func] if os.name == 'nt' else lgdal[func]
 
 #### Version-information functions. ####
 
@@ -69,7 +66,7 @@ def gdal_full_version():
     "Returns the full GDAL version information."
     return _version_info('')
 
-def gdal_release_date(date=False): 
+def gdal_release_date(date=False):
     """
     Returns the release date in a string format, e.g, "2007/06/27".
     If the date keyword argument is set to True, a Python datetime object
@@ -77,10 +74,9 @@ def gdal_release_date(date=False):
     """
     from datetime import date as date_type
     rel = _version_info('RELEASE_DATE')
-    yy, mm, dd = map(int, (rel[0:4], rel[4:6], rel[6:8]))
+    yy, mm, dd = map(int, (rel[:4], rel[4:6], rel[6:8]))
     d = date_type(yy, mm, dd)
-    if date: return d
-    else: return d.strftime('%Y/%m/%d')
+    return d if date else d.strftime('%Y/%m/%d')
 
 version_regex = re.compile(r'^(?P<major>\d+)\.(?P<minor>\d+)(\.(?P<subminor>\d+))?')
 def gdal_version_info():
@@ -97,8 +93,5 @@ GDAL_VERSION = (GDAL_MAJOR_VERSION, GDAL_MINOR_VERSION, GDAL_SUBMINOR_VERSION)
 del _verinfo
 
 # GeoJSON support is available only in GDAL 1.5+.
-if GDAL_VERSION >= (1, 5):
-    GEOJSON = True
-else:
-    GEOJSON = False
+GEOJSON = GDAL_VERSION >= (1, 5)
 

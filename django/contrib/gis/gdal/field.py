@@ -54,10 +54,18 @@ class Field(GDALBase):
 
     def as_datetime(self):
         "Retrieves the Field's value as a tuple of date & time components."
-        yy, mm, dd, hh, mn, ss, tz = [c_int() for i in range(7)]
-        status = capi.get_field_as_datetime(self._feat, self._index, byref(yy), byref(mm), byref(dd),
-                                            byref(hh), byref(mn), byref(ss), byref(tz))
-        if status:
+        yy, mm, dd, hh, mn, ss, tz = [c_int() for _ in range(7)]
+        if status := capi.get_field_as_datetime(
+            self._feat,
+            self._index,
+            byref(yy),
+            byref(mm),
+            byref(dd),
+            byref(hh),
+            byref(mn),
+            byref(ss),
+            byref(tz),
+        ):
             return (yy, mm, dd, hh, mn, ss, tz)
         else:
             raise OGRException('Unable to retrieve date & time information from the field.')
@@ -101,12 +109,7 @@ class OFTInteger(Field):
     @property
     def value(self):
         "Returns an integer contained in this field."
-        if self._double:
-            # If this is really from an OFTReal field with no precision,
-            # read as a double and cast as Python int (to prevent overflow).
-            return int(self.as_double())
-        else:
-            return self.as_int()
+        return int(self.as_double()) if self._double else self.as_int()
 
     @property
     def type(self):

@@ -30,7 +30,7 @@ class FormPreview(object):
         stage = {'1': 'preview', '2': 'post'}.get(request.POST.get(self.unused_name('stage')), 'preview')
         self.parse_params(*args, **kwargs)
         try:
-            method = getattr(self, stage + '_' + request.method.lower())
+            method = getattr(self, f'{stage}_' + request.method.lower())
         except AttributeError:
             raise Http404
         return method(request)
@@ -77,15 +77,14 @@ class FormPreview(object):
     def post_post(self, request):
         "Validates the POST data. If valid, calls done(). Else, redisplays form."
         f = self.form(request.POST, auto_id=self.get_auto_id())
-        if f.is_valid():
-            if not self._check_security_hash(request.POST.get(self.unused_name('hash'), ''),
-                                             request, f):
-                return self.failed_hash(request) # Security hash failed.
-            return self.done(request, f.cleaned_data)
-        else:
+        if not f.is_valid():
             return render_to_response(self.form_template,
                 self.get_context(request, f),
                 context_instance=RequestContext(request))
+        if not self._check_security_hash(request.POST.get(self.unused_name('hash'), ''),
+                                         request, f):
+            return self.failed_hash(request) # Security hash failed.
+        return self.done(request, f.cleaned_data)
 
     # METHODS SUBCLASSES MIGHT OVERRIDE IF APPROPRIATE ########################
 

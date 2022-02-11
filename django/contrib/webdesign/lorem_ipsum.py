@@ -49,7 +49,11 @@ def sentence():
     """
     # Determine the number of comma-separated sections and number of words in
     # each section for this sentence.
-    sections = [u' '.join(random.sample(WORDS, random.randint(3, 12))) for i in range(random.randint(1, 5))]
+    sections = [
+        u' '.join(random.sample(WORDS, random.randint(3, 12)))
+        for _ in range(random.randint(1, 5))
+    ]
+
     s = u', '.join(sections)
     # Convert to sentence case and add end punctuation.
     return u'%s%s%s' % (s[0].upper(), s[1:], random.choice('?.'))
@@ -60,7 +64,7 @@ def paragraph():
 
     The paragraph consists of between 1 and 4 sentences, inclusive.
     """
-    return u' '.join([sentence() for i in range(random.randint(1, 4))])
+    return u' '.join([sentence() for _ in range(random.randint(1, 4))])
 
 def paragraphs(count, common=True):
     """
@@ -85,10 +89,7 @@ def words(count, common=True):
     If `common` is True, then the first 19 words will be the standard
     'lorem ipsum' words. Otherwise, all words will be selected randomly.
     """
-    if common:
-        word_list = list(COMMON_WORDS)
-    else:
-        word_list = []
+    word_list = list(COMMON_WORDS) if common else []
     c = len(word_list)
     if count > c:
         count -= c

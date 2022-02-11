@@ -166,7 +166,7 @@ class WKBWriter(IOBase):
         return wkb_writer_get_byteorder(self.ptr)
 
     def _set_byteorder(self, order):
-        if not order in (0, 1): raise ValueError('Byte order parameter must be 0 (Big Endian) or 1 (Little Endian).')
+        if order not in (0, 1): raise ValueError('Byte order parameter must be 0 (Big Endian) or 1 (Little Endian).')
         wkb_writer_set_byteorder(self.ptr, order)
 
     byteorder = property(_get_byteorder, _set_byteorder)
@@ -176,7 +176,7 @@ class WKBWriter(IOBase):
         return wkb_writer_get_outdim(self.ptr)
 
     def _set_outdim(self, new_dim):
-        if not new_dim in (2, 3): raise ValueError('WKB output dimension must be 2 or 3')
+        if new_dim not in (2, 3): raise ValueError('WKB output dimension must be 2 or 3')
         wkb_writer_set_outdim(self.ptr, new_dim)
 
     outdim = property(_get_outdim, _set_outdim)
@@ -186,8 +186,7 @@ class WKBWriter(IOBase):
         return bool(ord(wkb_writer_get_include_srid(self.ptr)))
 
     def _set_include_srid(self, include):
-        if bool(include): flag = chr(1)
-        else: flag = chr(0)
+        flag = chr(1) if bool(include) else chr(0)
         wkb_writer_set_include_srid(self.ptr, flag)
 
     srid = property(_get_include_srid, _set_include_srid)

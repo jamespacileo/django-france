@@ -40,7 +40,7 @@ def compile_messages(stderr, locale=None):
                     # quote any malicious characters/escaping.
                     # See http://cyberelk.net/tim/articles/cmdline/ar01s02.html
                     os.environ['djangocompilemo'] = pf + '.mo'
-                    os.environ['djangocompilepo'] = pf + '.po'
+                    os.environ['djangocompilepo'] = f'{pf}.po'
                     if sys.platform == 'win32': # Different shell-variable syntax
                         cmd = 'msgfmt --check-format -o "%djangocompilemo%" "%djangocompilepo%"'
                     else:

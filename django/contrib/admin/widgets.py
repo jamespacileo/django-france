@@ -35,8 +35,13 @@ class FilteredSelectMultiple(forms.SelectMultiple):
         if attrs is None: attrs = {}
         attrs['class'] = 'selectfilter'
         if self.is_stacked: attrs['class'] += 'stacked'
-        output = [super(FilteredSelectMultiple, self).render(name, value, attrs, choices)]
-        output.append(u'<script type="text/javascript">addEvent(window, "load", function(e) {')
+        output = [
+            super(FilteredSelectMultiple, self).render(
+                name, value, attrs, choices
+            ),
+            '<script type="text/javascript">addEvent(window, "load", function(e) {',
+        ]
+
         # TODO: "id_" is hard-coded here. This should instead use the correct
         # API to determine the ID dynamically.
         output.append(u'SelectFilter.init("id_%s", "%s", %s, "%s"); });</script>\n' % \
@@ -124,8 +129,7 @@ class ForeignKeyRawIdWidget(forms.TextInput):
         if attrs is None:
             attrs = {}
         related_url = '../../../%s/%s/' % (self.rel.to._meta.app_label, self.rel.to._meta.object_name.lower())
-        params = self.url_parameters()
-        if params:
+        if params := self.url_parameters():
             url = u'?' + u'&amp;'.join([u'%s=%s' % (k, v) for k, v in params.items()])
         else:
             url = u''
@@ -167,10 +171,7 @@ class ManyToManyRawIdWidget(ForeignKeyRawIdWidget):
         if attrs is None:
             attrs = {}
         attrs['class'] = 'vManyToManyRawIdAdminField'
-        if value:
-            value = ','.join([force_unicode(v) for v in value])
-        else:
-            value = ''
+        value = ','.join([force_unicode(v) for v in value]) if value else ''
         return super(ManyToManyRawIdWidget, self).render(name, value, attrs)
 
     def url_parameters(self):
@@ -180,8 +181,7 @@ class ManyToManyRawIdWidget(ForeignKeyRawIdWidget):
         return ''
 
     def value_from_datadict(self, data, files, name):
-        value = data.get(name)
-        if value:
+        if value := data.get(name):
             return value.split(',')
 
     def _has_changed(self, initial, data):
@@ -191,10 +191,10 @@ class ManyToManyRawIdWidget(ForeignKeyRawIdWidget):
             data = []
         if len(initial) != len(data):
             return True
-        for pk1, pk2 in zip(initial, data):
-            if force_unicode(pk1) != force_unicode(pk2):
-                return True
-        return False
+        return any(
+            force_unicode(pk1) != force_unicode(pk2)
+            for pk1, pk2 in zip(initial, data)
+        )
 
 class RelatedFieldWidgetWrapper(forms.Widget):
     """

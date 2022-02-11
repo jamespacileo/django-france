@@ -76,9 +76,10 @@ class GoogleMap(object):
         # level and a center coordinate are provided with polygons/polylines,
         # no automatic determination will occur.
         self.calc_zoom = False
-        if self.polygons or self.polylines  or self.markers:
-            if center is None or zoom is None:
-                self.calc_zoom = True
+        if (self.polygons or self.polylines or self.markers) and (
+            center is None or zoom is None
+        ):
+            self.calc_zoom = True
 
         # Defaults for the zoom level and center coordinates if the zoom
         # is not automatically calculated.
@@ -143,7 +144,7 @@ class GoogleMap(object):
     @property
     def icons(self):
         "Returns a sequence of GIcon objects in this map."
-        return set([marker.icon for marker in self.markers if marker.icon])
+        return {marker.icon for marker in self.markers if marker.icon}
 
 class GoogleMapSet(GoogleMap):
 
@@ -170,11 +171,7 @@ class GoogleMapSet(GoogleMap):
         self.template = template
 
         # If a tuple/list passed in as first element of args, then assume
-        if isinstance(args[0], (tuple, list)):
-            self.maps = args[0]
-        else:
-            self.maps = args
-
+        self.maps = args[0] if isinstance(args[0], (tuple, list)) else args
         # Generating DOM ids for each of the maps in the set.
         self.dom_ids = ['map%d' % i for i in xrange(len(self.maps))]
 

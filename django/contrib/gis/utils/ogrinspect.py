@@ -27,9 +27,7 @@ def mapping(data_source, geom_name='geom', layer_key=0, multi_geom=False):
     if isinstance(data_source, basestring):
         # Instantiating the DataSource from the string.
         data_source = DataSource(data_source)
-    elif isinstance(data_source, DataSource):
-        pass
-    else:
+    elif not isinstance(data_source, DataSource):
         raise TypeError('Data source parameter must be a string or a DataSource object.')
 
     # Creating the dictionary.
@@ -114,7 +112,7 @@ def ogrinspect(*args, **kwargs):
 
     Note: This routine calls the _ogrinspect() helper to do the heavy lifting.
     """
-    return '\n'.join(s for s in _ogrinspect(*args, **kwargs))
+    return '\n'.join(_ogrinspect(*args, **kwargs))
 
 def _ogrinspect(data_source, model_name, geom_name='geom', layer_key=0, srid=None,
                 multi_geom=False, name_field=None, imports=True,
@@ -154,8 +152,7 @@ def _ogrinspect(data_source, model_name, geom_name='geom', layer_key=0, srid=Non
         kwlist = []
         if field_name.lower() in null_fields: kwlist.append('null=True')
         if field_name.lower() in blank_fields: kwlist.append('blank=True')
-        if kwlist: return ', ' + ', '.join(kwlist)
-        else: return ''
+        return ', ' + ', '.join(kwlist) if kwlist else ''
 
     # For those wishing to disable the imports.
     if imports:

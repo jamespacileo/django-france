@@ -107,10 +107,7 @@ class LimitedStream(object):
                 break
             self.buffer += chunk
         sio = StringIO(self.buffer)
-        if size:
-            line = sio.readline(size)
-        else:
-            line = sio.readline()
+        line = sio.readline(size) if size else sio.readline()
         self.buffer = sio.read()
         return line
 
@@ -244,33 +241,31 @@ class WSGIHandler(base.BaseHandler):
         if self._request_middleware is None:
             self.initLock.acquire()
             try:
-                try:
-                    # Check that middleware is still uninitialised.
-                    if self._request_middleware is None:
-                        self.load_middleware()
-                except:
-                    # Unload whatever middleware we got
-                    self._request_middleware = None
-                    raise
+                # Check that middleware is still uninitialised.
+                if self._request_middleware is None:
+                    self.load_middleware()
+            except:
+                # Unload whatever middleware we got
+                self._request_middleware = None
+                raise
             finally:
                 self.initLock.release()
 
         set_script_prefix(base.get_script_name(environ))
         signals.request_started.send(sender=self.__class__)
         try:
-            try:
-                request = self.request_class(environ)
-            except UnicodeDecodeError:
-                logger.warning('Bad Request (UnicodeDecodeError)',
-                    exc_info=sys.exc_info(),
-                    extra={
-                        'status_code': 400,
-                        'request': request
-                    }
-                )
-                response = http.HttpResponseBadRequest()
-            else:
-                response = self.get_response(request)
+            request = self.request_class(environ)
+        except UnicodeDecodeError:
+            logger.warning('Bad Request (UnicodeDecodeError)',
+                exc_info=sys.exc_info(),
+                extra={
+                    'status_code': 400,
+                    'request': request
+                }
+            )
+            response = http.HttpResponseBadRequest()
+        else:
+            response = self.get_response(request)
         finally:
             signals.request_finished.send(sender=self.__class__)
 
@@ -280,8 +275,11 @@ class WSGIHandler(base.BaseHandler):
             status_text = 'UNKNOWN STATUS CODE'
         status = '%s %s' % (response.status_code, status_text)
         response_headers = [(str(k), str(v)) for k, v in response.items()]
-        for c in response.cookies.values():
-            response_headers.append(('Set-Cookie', str(c.output(header=''))))
+        response_headers.extend(
+            ('Set-Cookie', str(c.output(header='')))
+            for c in response.cookies.values()
+        )
+
         start_response(status, response_headers)
         return response
 

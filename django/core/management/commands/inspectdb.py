@@ -66,16 +66,21 @@ class Command(NoArgsCommand):
                 if ' ' in att_name:
                     att_name = att_name.replace(' ', '_')
                     comment_notes.append('Field renamed to remove spaces.')
-                    
+
                 if '-' in att_name:
                     att_name = att_name.replace('-', '_')
                     comment_notes.append('Field renamed to remove dashes.')
-                    
+
                 if column_name != att_name:
                     comment_notes.append('Field name made lowercase.')
 
                 if i in relations:
-                    rel_to = relations[i][1] == table_name and "'self'" or table2model(relations[i][1])
+                    rel_to = (
+                        "'self'"
+                        if relations[i][1] == table_name
+                        else table2model(relations[i][1])
+                    )
+
                     field_type = 'ForeignKey(%s' % rel_to
                     if att_name.endswith('_id'):
                         att_name = att_name[:-3]
@@ -96,7 +101,7 @@ class Command(NoArgsCommand):
                             extra_params['unique'] = True
 
                     field_type += '('
-                    
+
                 if keyword.iskeyword(att_name):
                     att_name += '_field'
                     comment_notes.append('Field renamed because it was a Python reserved word.')
@@ -110,7 +115,7 @@ class Command(NoArgsCommand):
                 # table description.
                 if row[6]: # If it's NULL...
                     extra_params['blank'] = True
-                    if not field_type in ('TextField(', 'CharField('):
+                    if field_type not in ('TextField(', 'CharField('):
                         extra_params['null'] = True
 
                 field_desc = '%s = models.%s' % (att_name, field_type)
@@ -122,8 +127,7 @@ class Command(NoArgsCommand):
                 if comment_notes:
                     field_desc += ' # ' + ' '.join(comment_notes)
                 yield '    %s' % field_desc
-            for meta_line in self.get_meta(table_name):
-                yield meta_line
+            yield from self.get_meta(table_name)
 
     def get_field_type(self, connection, table_name, row):
         """

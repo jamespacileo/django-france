@@ -95,14 +95,13 @@ class BaseCommentNode(template.Node):
         return qs
 
     def get_target_ctype_pk(self, context):
-        if self.object_expr:
-            try:
-                obj = self.object_expr.resolve(context)
-            except template.VariableDoesNotExist:
-                return None, None
-            return ContentType.objects.get_for_model(obj), obj.pk
-        else:
+        if not self.object_expr:
             return self.ctype, self.object_pk_expr.resolve(context, ignore_failures=True)
+        try:
+            obj = self.object_expr.resolve(context)
+        except template.VariableDoesNotExist:
+            return None, None
+        return ContentType.objects.get_for_model(obj), obj.pk
 
     def get_context_value_from_queryset(self, context, qs):
         """Subclasses should override this."""
